@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "tokint",
+  "name": "TOKINT",
   "version": "1.0.0",
   "description": "Contract, NFT metadata, and IPFS lookups from your address bar. Type eth, then Tab.",
   "minimum_chrome_version": "109",
@@ -12,7 +12,7 @@
     "type": "module"
   },
   "action": {
-    "default_title": "Open tokint \u2014 inspect the current token",
+    "default_title": "Open TOKINT \u2014 inspect the current token",
     "default_popup": "launcher.html",
     "default_icon": {
       "16": "icons/tokint-16.png",

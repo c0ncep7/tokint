@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "tokint \u2014 IPFS shortcut",
+  "name": "TOKINT \u2014 IPFS shortcut",
   "version": "1.0.0",
   "description": "Type ipfs, then Tab, to open content using your tokint gateway.",
   "minimum_chrome_version": "109",

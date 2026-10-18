@@ -46,7 +46,7 @@ try {
     if (name.endsWith('.json')) {
       metadataCalls++;
       const id = name.split('.')[0];
-      const media = id === '2' ? { animation_url: 'moving.gif' } : id === '3' ? { image_url: 'wide.jpg', animation_url: '{id}.gif' } : {
+      const media = id === '2' ? { image: 'moving.gif', animation_url: 'moving.gif', media: { url: ' moving.gif ' }, properties: { files: [{ uri: 'moving.gif' }] } } : id === '3' ? { image_url: 'wide.jpg', animation_url: '{id}.gif' } : {
         image: 'wide.jpg', animation_url: 'moving.gif', image_data: svg,
         properties: { files: [{ uri: 'moving.webp' }, { uri: 'slow.gif' }, { uri: 'unsupported.mp4' }, { uri: 'https://media-denied.example/art.gif' }] },
       };
@@ -115,6 +115,7 @@ try {
   await original(fixtures.gif, 'gif'); await convert('gif', true); await convert('webp', true); await page.locator('#close-share-modal').click();
   await select('properties.files[0]', 'WEBP'); await original(fixtures.webp, 'webp'); await convert('gif', true); await page.locator('#close-share-modal').click();
   await select('image_data', 'SVG');
+  assert.equal(await page.locator('#media-caption').textContent(), '20 × 10');
   assert.equal(await page.locator('#image-link').isVisible(), false);
   await original(Buffer.from(svg), 'svg');
   const svgOutput = await convert('jpg', false);
@@ -143,11 +144,12 @@ try {
 
   await submit(2);
   assert.equal(await page.locator('#media-source').isVisible(), false);
+  assert.equal(await page.locator('#media-source option').count(), 1);
   assert.equal(await page.locator('#media-type').textContent(), 'GIF');
   await submit(3, 'uri'); await select('animation_url', 'GIF');
   assert.equal(await page.locator('#image-link').getAttribute('href'), `${base}/${'3'.padStart(64, '0')}.gif`);
   assert.equal(await page.locator('#method-badge').textContent(), 'ERC-1155');
-  console.log('PASS animation-only tokens and ERC-1155 substitution apply to selected assets');
+  console.log('PASS identical media fields hide the selector; ERC-1155 substitution applies to distinct selected assets');
 
   await submit(4);
   assert.equal(await page.locator('.preview-footer #media-source').count(), 1);
@@ -161,6 +163,7 @@ try {
   assert.equal(await page.locator('#html-stage iframe').getAttribute('sandbox'), 'allow-scripts');
   assert.equal(await page.evaluate(() => document.body.dataset.compromised), undefined);
   await page.locator('#fullscreen-media').click();
+  await page.locator('#fullscreen-stage iframe').waitFor({ state: 'attached' });
   assert.equal(await page.locator('#fullscreen-stage iframe').count(), 1);
   await page.locator('#close-media-modal').click();
   assert.equal(await page.locator('#html-stage iframe').count(), 1);

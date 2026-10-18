@@ -1,4 +1,5 @@
 import { setBusy } from './loading';
+import type { ConversionCapabilities } from './conversion-capabilities-worker';
 import { createHtmlMedia, type HtmlMedia } from './html-media';
 import { downloadName, embeddedMediaBlob, mediaExtension } from './downloads';
 import { prepareSvg, svgPixels, svgExportSize, staticSvgResult, type SvgPlan } from './svg';
@@ -6,7 +7,7 @@ import { Failure } from './core';
 import { loadMedia } from './network';
 import { SHARE_SOURCE_LIMIT, SHARE_TIMEOUT, animationFrameTime, assertExportDimensions, sizeLabel, targetBytes, validateOptions, type ShareMessage, type ShareOptions } from './share-core';
 
-type Source = { url: string; contract: string; id: bigint; blob?: Blob; width?: number; height?: number; frames?: number; inspectionError?: string; svg?: SvgPlan; html?: boolean };
+type Source = { url: string; contract: string; id: bigint; blob?: Blob; width?: number; height?: number; frames?: number; decoderType?: string; inspectionError?: string; svg?: SvgPlan; html?: boolean };
 export function createShareModal() {
   const el = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
   const open = el<HTMLButtonElement>('share-media');
@@ -16,6 +17,7 @@ export function createShareModal() {
   const cancel = el<HTMLButtonElement>('share-cancel');
   const progress = el<HTMLProgressElement>('share-progress');
   const status = el('share-status');
+  const capabilityStatus = el('share-capabilities');
   const original = el('share-original');
   const preview = el<HTMLImageElement>('share-preview');
   const download = el<HTMLAnchorElement>('share-download');
@@ -25,6 +27,27 @@ export function createShareModal() {
   const fps = el<HTMLSelectElement>('share-fps');
   const svgDuration = el<HTMLInputElement>('share-svg-duration');
   let source: Source | undefined;
+  let capabilities: ConversionCapabilities | undefined;
+  let capabilityError = '';
+  let capabilityCheck: Promise<void> | undefined;
+  function checkCapabilities() {
+    if (capabilityCheck) return capabilityCheck;
+    capabilityCheck = new Promise<void>(resolve => {
+      let checker: Worker | undefined;
+      const timer = setTimeout(() => finish('Browser conversion checks timed out. Reload this tab to retry.'), 10_000);
+      function finish(error = '') {
+        clearTimeout(timer); checker?.terminate(); capabilityError = error;
+        updateControls(); resolve();
+      }
+      try {
+        checker = new Worker(chrome.runtime.getURL('conversion-capabilities-worker.js'), { type: 'module' });
+        checker.onmessage = (event: MessageEvent<ConversionCapabilities>) => { capabilities = event.data; finish(); };
+        checker.onerror = () => finish('This browser cannot start the image converter.');
+        checker.postMessage(null);
+      } catch { finish('This browser cannot start the image converter.'); }
+    });
+    return capabilityCheck;
+  }
   let originalUrl: string | undefined;
   let originalBlob: Blob | undefined;
   let originalController: AbortController | undefined;
@@ -98,6 +121,7 @@ export function createShareModal() {
     generate.disabled = false; cancel.hidden = true; progress.hidden = true;
     generate.textContent = permissionOrigin ? 'Allow and convert' : 'Convert';
     form.removeAttribute('aria-busy');
+    updateControls();
   }
   function cleanup() {
     originalController?.abort(); originalController = undefined; fetchOriginal.disabled = false; setBusy(originalStatus, false);
@@ -117,6 +141,23 @@ export function createShareModal() {
     svgDuration.disabled = !source?.svg?.animated && !source?.html;
     el('share-svg-duration-label').hidden = svgDuration.disabled;
     fps.options[0].textContent = source?.svg || source?.html ? '20 fps' : 'Original';
+    const gif = !!capabilities?.canvas && !!capabilities?.wasm;
+    const webp = !!capabilities?.canvas && !!capabilities?.webp;
+    for (const option of format.options) option.disabled = option.value === 'gif' ? !gif : !webp;
+    if (format.selectedOptions[0]?.disabled) {
+      const supported = Array.from(format.options).find(option => !option.disabled);
+      if (supported) format.value = supported.value;
+    }
+    let unavailable = capabilityError;
+    if (!unavailable && !capabilities) unavailable = 'Checking browser conversion support…';
+    else if (!unavailable && !capabilities?.canvas) unavailable = 'Image conversion is unavailable in this browser.';
+    else if (!unavailable && source?.decoderType && !capabilities?.decoders[source.decoderType]) unavailable = 'This browser cannot decode this image for conversion.';
+    else if (!unavailable && animated && !gif && !webp) unavailable = 'Animated image export is unavailable in this browser.';
+    else if (!unavailable && !animated && !capabilities?.jpeg) unavailable = 'JPEG export is unavailable in this browser.';
+    capabilityStatus.textContent = unavailable
+      ? `${unavailable}${capabilities || capabilityError ? ' Original download is still available.' : ''}`
+      : animated && (!gif || !webp) ? `${gif ? 'WebP export' : 'GIF optimization'} is unavailable in this browser. ${gif ? 'GIF' : 'WebP'} is selected.` : '';
+    generate.disabled = !!unavailable || form.getAttribute('aria-busy') === 'true';
   }
   function stopProbe() {
     setBusy(original, false);
@@ -135,6 +176,8 @@ export function createShareModal() {
     try {
       const extension = await mediaExtension(current.blob, current.url);
       if (!active()) return;
+      current.decoderType = ({ jpg: 'image/jpeg', png: 'image/png', gif: 'image/gif', webp: 'image/webp' } as Record<string, string>)[extension];
+      updateControls();
       if (extension === 'html') {
         current.html = true; current.frames = 2; svgDuration.value = '3';
         sourceLabel(); updateControls(); stopProbe(); return;
@@ -180,6 +223,7 @@ export function createShareModal() {
     clearOutput(); sourceLabel(); updateControls();
     message(source?.inspectionError ?? '', !!source?.inspectionError); originalStatus.textContent = '';
     dialog.showModal(); document.body.classList.add('modal-open');
+    void checkCapabilities();
     el('close-share-modal').focus();
     void inspectSource();
   });

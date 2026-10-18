@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="704" height="84" viewBox="0 0 704 84">
+  <title>TOKINT</title>
+  <g fill="#fff">
+    <path d="M0 0h73v13H43v71H30V13H0z"/>
+    <path fill-rule="evenodd" d="M146 0h42l12 12v60l-12 12h-42l-12-12V12zm1 13v58h40V13z"/>
+    <path d="M264 0h13v36h7l36-36h18l-42 42 42 42h-18l-36-36h-7v36h-13z"/>
+    <path d="M390 0h50v13h-18v58h18v13h-50V71h19V13h-19z"/>
+    <path d="M506 0h13l41 61V0h13v84h-13l-41-61v61h-13z"/>
+    <path d="M631 0h73v13h-30v71h-13V13h-30z"/>
+  </g>
+</svg>

@@ -5,9 +5,9 @@ import { embeddedImageBlob } from '../src/downloads';
 import { DEFAULTS, imageDataUri, readDataJson, resolveUri } from '../src/core';
 import { readFile } from 'node:fs/promises';
 
-test('media fields stay selectable with image as the default, including shared URLs', () => {
+test('distinct media stays selectable with image as the default and shared URLs deduplicated', () => {
   assert.deepEqual(tokenMedia({ animation_url: 'art.gif', image: ' art.png ', image_url: 'art.png', external_url: 'https://example.com', name: 'Token' }), [
-    { field: 'image', uri: 'art.png' }, { field: 'image_url', uri: 'art.png' }, { field: 'animation_url', uri: 'art.gif' },
+    { field: 'image', uri: 'art.png' }, { field: 'animation_url', uri: 'art.gif' },
   ]);
 });
 test('inline SVG is available alongside image and preserves its markup', async () => {

@@ -1,13 +1,18 @@
 import { build } from 'esbuild';
 import gifsicle from 'gifsicle-wasm-browser';
-import { cp, mkdir, rm, readFile, readdir, writeFile } from 'node:fs/promises';
+import { cp, mkdir, rm, readFile, readdir, writeFile, stat } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 // Resolve output paths from this script, never an arbitrary caller's directory.
 const projectRoot = fileURLToPath(new URL('..', import.meta.url));
 process.chdir(projectRoot);
-const bundle = options => build({ ...options, absWorkingDir: projectRoot });
+const metafiles = [];
+const bundle = async options => {
+  const result = await build({ ...options, absWorkingDir: projectRoot, metafile: true });
+  metafiles.push(result.metafile);
+  return result;
+};
 const pkg = JSON.parse(await readFile('package.json', 'utf8'));
 const lock = JSON.parse(await readFile('package-lock.json', 'utf8'));
 for (const file of ['public/manifest.json', 'companion/manifest.json']) {
@@ -27,9 +32,9 @@ await mkdir('extension');
 await cp('public', 'extension', { recursive: true });
 await writeFile('extension/gifsicle.wasm', Buffer.from(wasm[1], 'base64'));
 await writeFile('extension/gifsicle-runtime.js', '/* gifsicle-wasm-browser 1.5.19, MIT; see THIRD_PARTY_NOTICES.txt */\n' + runtime.slice(0, end + 1) + '\nexport default gifsicle;\n');
-await bundle({ entryPoints: ['src/background.ts', 'src/results.ts', 'src/options.ts', 'src/launcher.ts'], outdir: 'extension', bundle: true, format: 'esm', splitting: true, target: 'chrome109', minify: true, legalComments: 'eof', metafile: false });
+await bundle({ entryPoints: ['src/background.ts', 'src/results.ts', 'src/options.ts', 'src/launcher.ts'], outdir: 'extension', bundle: true, format: 'esm', splitting: true, target: 'chrome109', minify: true, legalComments: 'eof' });
 await bundle({ entryPoints: ['src/theme.ts', 'src/html-media-sandbox.ts'], outdir: 'extension', bundle: true, format: 'iife', target: 'chrome109', minify: true });
-await bundle({ entryPoints: ['src/share-worker.ts', 'src/svg-worker.ts'], external: ['./gifsicle-runtime.js'], outdir: 'extension', bundle: true, format: 'esm', target: 'chrome109', minify: true, legalComments: 'eof' });
+await bundle({ entryPoints: ['src/share-worker.ts', 'src/svg-worker.ts', 'src/conversion-capabilities-worker.ts'], external: ['./gifsicle-runtime.js'], outdir: 'extension', bundle: true, format: 'esm', target: 'chrome109', minify: true, legalComments: 'eof' });
 let notices = 'tokint — third-party dependency notices\n\nIncludes notices for runtime dependencies. Unused portions may be removed by the bundler.\n';
 for (const [folder, entry] of Object.entries(lock.packages)) {
   if (!folder || entry.dev) continue;
@@ -61,3 +66,33 @@ async function checksums(folder) {
 }
 await writeFile('SHA256SUMS.txt', [...await checksums('extension'), ...await checksums('ipfs-extension')].join('\n') + '\n');
 console.log('Updated SHA256SUMS.txt');
+
+async function sizes(folder) {
+  const files = [];
+  for (const entry of await readdir(folder, { withFileTypes: true })) {
+    const file = `${folder}/${entry.name}`;
+    if (entry.isDirectory()) files.push(...await sizes(file));
+    else files.push({ file, bytes: (await stat(file)).size });
+  }
+  return files.sort((a, b) => b.bytes - a.bytes || a.file.localeCompare(b.file));
+}
+const packages = {};
+for (const meta of metafiles) for (const output of Object.values(meta.outputs)) {
+  for (const [input, contribution] of Object.entries(output.inputs)) {
+    const name = input.match(/node_modules\/((?:@[^/]+\/)?[^/]+)/)?.[1] ?? 'project source';
+    packages[name] = (packages[name] ?? 0) + contribution.bytesInOutput;
+  }
+}
+const bundles = {};
+for (const folder of ['extension', 'ipfs-extension']) {
+  const files = await sizes(folder);
+  bundles[folder] = { bytes: files.reduce((sum, file) => sum + file.bytes, 0), files };
+  console.log(`${folder}: ${(bundles[folder].bytes / 1024).toFixed(1)} KiB unpacked (${files.length} files)`);
+}
+await writeFile('bundle-report.json', JSON.stringify({
+  version: pkg.version, bundles,
+  // Copied WASM/runtime assets are listed above, not in esbuild's contributions.
+  javascriptContributions: Object.fromEntries(Object.entries(packages).sort((a, b) => b[1] - a[1])),
+  metafiles,
+}, null, 2) + '\n');
+console.log('Bundle sizes and dependency contributions: bundle-report.json');

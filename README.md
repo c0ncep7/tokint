@@ -1,4 +1,6 @@
-# tokint
+# TOKINT
+
+<img src="docs/branding/tokint-reference.png" alt="TOKINT: three white bars above a geometric wordmark on black" width="240" height="240">
 
 A Chromium extension for Ethereum mainnet contract inspection, NFT metadata, IPFS links, and local image conversion. Requests go directly from your browser to the configured providers. No wallet, signing, or account is required for the core features.
 
@@ -12,6 +14,9 @@ Use Chrome, Brave, or another Chromium browser that supports unpacked Manifest V
 4. Pin tokint to the toolbar if desired. Clicking it opens the inspector in a new tab.
 
 The supplied build needs no Node.js installation. Settings are available from the inspector's gear icon or the browser's extension management page.
+
+Release ZIPs contain `extension/` or `ipfs-extension/`; extract the appropriate
+ZIP before choosing **Load unpacked**. The source ZIP is for development.
 
 ### Optional `ipfs` shortcut
 
@@ -27,7 +32,7 @@ The companion reads the main extension's saved gateway on each submission. It ha
 
 Enter a full contract address and decimal token ID, then press **Enter** or click **Inspect**. **Auto detect** probes the standard metadata interfaces and tries `tokenURI` or `uri`; select a method manually for contracts that need it. Large token IDs retain full uint256 precision, and ERC-1155 `{id}` placeholders are expanded automatically. Custom metadata functions are not supported, and an ERC-1155 URI response alone does not prove a token exists.
 
-The inspector shows the original metadata response, resolved URL, formatted JSON, attributes, and image preview. Use the copy and external-link controls to inspect sources. The contract link opens Etherscan's Read Contract page. When metadata provides multiple assets, the Media source dropdown in the preview footer switches between `image`, `animation_url`, `image_url`, inline SVG `image_data`, other media aliases, and `properties.files` entries. The selected asset drives the preview, storage badge, source link, original download, and conversion tools. Animated image formats work from any of these fields. Base64 HTML animations also preview in an isolated sandbox. Audio and video remain outbound links.
+The inspector shows the original metadata response, resolved URL, formatted JSON, attributes, and image preview. Use the copy and external-link controls to inspect sources. The contract link opens Etherscan's Read Contract page. When metadata provides multiple distinct assets, the Media source dropdown in the preview footer switches between `image`, `animation_url`, `image_url`, inline SVG `image_data`, other media aliases, and `properties.files` entries. Duplicate media values share one entry; the selector is hidden when only one distinct value remains. The selected asset drives the preview, storage badge, source link, original download, and conversion tools. Animated image formats work from any of these fields. Base64 HTML animations also preview in an isolated sandbox. Audio and video remain outbound links.
 
 Click the toolbar button on an OpenSea, SuperRare, or other HTTP(S) page with adjacent `/contract-address/token-ID` path segments to open that token automatically. The source tab stays open. Unsupported or ambiguous URLs require manual entry. Only Ethereum mainnet is supported: recognized non-mainnet labels are rejected, while unlabeled URLs are assumed to be mainnet. Website URL conventions cannot reliably identify every chain.
 
@@ -66,6 +71,10 @@ Use the sun/moon button for a saved light or dark theme, the info button for hel
 ## Download and convert
 
 The Media download button opens **Download/Convert**. Choose **Original** to save the selected image or HTML bytes unchanged, or adjust the export controls, click **Convert**, inspect the preview, and click **Download**. All conversion runs locally; media is never uploaded to a conversion service.
+
+The dialog checks browser decoding, canvas encoding, and WebAssembly support.
+Unavailable export formats are disabled with an explanation; original downloads
+remain available. Updating the browser may enable additional conversion formats.
 
 | Source | Converted output |
 | --- | --- |
@@ -131,6 +140,24 @@ npm run check
 
 `check` runs strict TypeScript checking, deterministic unit tests, and the production build. The build replaces `extension/` and `ipfs-extension/`, packages local JavaScript/WebAssembly and third-party notices, and regenerates `SHA256SUMS.txt`. Both source manifests and the lockfile must match the version in `package.json`. Edit source files, not generated builds.
 
+Every build also writes `bundle-report.json` with exact unpacked file sizes,
+JavaScript dependency contributions, and esbuild metadata. Copied WASM and its
+runtime appear in the file sizes, separately from esbuild's contributions.
+
+Generate local release artifacts with:
+
+```sh
+npm run release
+```
+
+This rebuilds and writes the main extension ZIP, optional companion ZIP,
+corresponding source ZIP, bundle report, distribution note, and checksums to
+`releases/<version>/`. It uses Node.js without a system archive tool. Entries have
+fixed timestamps and stable ordering; unchanged inputs on the same toolchain
+produce identical archives. Repeating the command replaces that version's local
+artifacts. It does not publish or run the browser tests. See
+[DISTRIBUTION.md](DISTRIBUTION.md) for the unresolved project license decision.
+
 For the complete automated release checks:
 
 ```sh
@@ -145,14 +172,18 @@ Browser tests use temporary profiles and mocked RPC/content responses, with outp
 | `npm test` | Deterministic unit tests |
 | `npm run typecheck` | Source, unit tests, and live-check script |
 | `npm run build` | Both unpacked extensions, notices, and checksums |
+| `npm run release` | Rebuild and package both extensions, corresponding source, report, and archive checksums |
+| `npm run test:offline` | Local JPEG/WebP/GIF conversion with external requests blocked, WASM optimization, and unavailable browser capabilities |
 | `npm run test:browser` | Inspector, conversion, cache, and Alchemy browser suites |
 | `npm run test:config` | Settings, companion pairing, and missing-companion recovery |
 | `npm run test:opensea` | Actual toolbar actions, including generic token URLs |
 | `npm run test:cache` / `npm run test:alchemy` | Focused browser suites |
 | `npm run test:live` | Optional read-only mainnet and IPFS checks; requires network access |
-| `npm run test:release` | Typecheck, units, build, and all standard browser suites |
+| `npm run test:release` | Typecheck, units, build, and all standard browser suites including offline conversion |
 
 Run `npm outdated` and `npm audit` with registry access before release. All declared dependencies are used; `gifsicle-wasm-browser` is pinned because the build extracts its embedded runtime. See [VERIFICATION.md](VERIFICATION.md) for actual results and outstanding checks.
+
+The original TOKINT artwork is preserved in `docs/branding/tokint-reference.png`. Editable icon, mark, and wordmark SVGs live in `public/icons/`. After changing the icon master (`tokint.svg`), run `node scripts/render-icons.mjs` to regenerate all PNG sizes, then rebuild both extensions.
 
 Additional tools:
 

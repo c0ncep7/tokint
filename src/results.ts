@@ -250,7 +250,7 @@ async function preview(url: string, ticket: Ticket, cachedImage?: Blob, cache?: 
       const width = svgSize?.width ?? (extension === 'svg' ? undefined : image.naturalWidth);
       const height = svgSize?.height ?? (extension === 'svg' ? undefined : image.naturalHeight);
       shareModal.setBlob(url, blob, width, height);
-      el('media-caption').textContent = width && height ? `${width} × ${height}${extension === 'svg' ? ' SVG units' : ' pixels'}` : 'SVG image';
+      el('media-caption').textContent = width && height ? `${width} × ${height}${extension === 'svg' ? '' : ' pixels'}` : 'SVG image';
       el('media-type').textContent = extension === 'jpg' ? 'JPEG' : extension.toUpperCase();
       status('');
     };

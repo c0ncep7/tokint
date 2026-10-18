@@ -3,3 +3,5 @@ extension/
 ipfs-extension/
 test-results/
 .DS_Store
+bundle-report.json
+releases/

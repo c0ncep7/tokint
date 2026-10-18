@@ -6,6 +6,7 @@ const fields = ['image', 'image_url', 'imageUrl', 'image_data', 'animation_url',
 
 export function tokenMedia(metadata: Record<string, unknown>): TokenMedia[] {
   const result: TokenMedia[] = [];
+  const seen = new Set<string>();
   function add(field: string, value: unknown) {
     if (value && typeof value === 'object' && !Array.isArray(value)) {
       const object = value as Record<string, unknown>;
@@ -16,6 +17,8 @@ export function tokenMedia(metadata: Record<string, unknown>): TokenMedia[] {
     if (field.endsWith('image_data') && /^\s*(?:<\?xml[^>]*>\s*)?(?:<!--[\s\S]*?-->\s*)*<svg[\s>]/i.test(uri)) {
       uri = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(uri)}`;
     }
+    if (seen.has(uri)) return;
+    seen.add(uri);
     result.push({ field, uri });
   }
   for (const field of fields) add(field, metadata[field]);
