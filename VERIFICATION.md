@@ -4,6 +4,7 @@ Reviewed on October 18, 2026, with a packaging and browser-support follow-up on 
 
 ## Packaging and browser-support follow-up
 
+- Token-service links: bundled OpenSea and OnChainChecker logos now appear beneath the media and link to the submitted Ethereum contract/token. The official OpenSea item URL and OnChainChecker's documented collection URL were checked. TypeScript, all 121 unit tests, and builds passed. An isolated browser smoke check verified exact large token IDs, local logo loading, new-tab destinations, no service requests before clicks, submitted-versus-edited input behavior, invalid-input cleanup, and dark/light/narrow layouts; screenshots were visually inspected.
 - Subsequent media-display adjustment: duplicate media values now share one selector entry, keeping the first field in the existing image-first order. A single distinct value hides the selector. SVG dimensions no longer append "SVG units". TypeScript, all 121 unit tests, production builds, and the media browser suite passed; the browser suite explicitly checks duplicate fields and the SVG caption.
 - Added `npm run release` for local extension, companion, and corresponding source ZIPs, archive checksums, a distribution note, and a bundle report. No package or system dependency was added.
 - Builds now report unpacked sizes and JavaScript dependency contributions in `bundle-report.json`. Gifsicle remains bundled and loaded on demand; `DISTRIBUTION.md` records the unresolved project-license decision.

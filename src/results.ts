@@ -133,6 +133,8 @@ function reset() {
   el('handoff-info').textContent = '';
   resetMedia();
   selectMedia = undefined; mediaSelect.replaceChildren(); el('media-source-control').hidden = true;
+  el('token-service-links').hidden = true;
+  link('opensea-token-link'); link('onchainchecker-token-link');
   objectUrls.forEach(URL.revokeObjectURL); objectUrls = [];
   imageNote('Loading…', true);
   el('name').textContent = 'Loading token…';
@@ -268,6 +270,9 @@ async function run(fresh = false) {
     const id = tokenId(tokenInput.value);
     const method = methodInput.value as Method;
     contractInput.value = contract; tokenInput.value = id.toString();
+    link('opensea-token-link', `https://opensea.io/item/ethereum/${contract.toLowerCase()}/${id}`);
+    link('onchainchecker-token-link', `https://onchainchecker.xyz/collection/ethereum/${contract.toLowerCase()}/${id}`);
+    el('token-service-links').hidden = false;
     updateReadContractButton();
     const contractLink = document.createElement('a');
     contractLink.textContent = contract; contractLink.href = explorer(contract);
