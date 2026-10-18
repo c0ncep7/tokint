@@ -1,0 +1,37 @@
+{
+  "name": "tokint",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "test:browser": "node scripts/browser-test.mjs && node scripts/media-browser-test.mjs && node scripts/share-browser-test.mjs && node scripts/cache-browser-test.mjs && node scripts/alchemy-browser-test.mjs",
+    "test:media": "node scripts/media-browser-test.mjs",
+    "test:opensea": "node scripts/opensea-browser-test.mjs",
+    "test:live": "node --import tsx scripts/live-check.ts",
+    "test:config": "node scripts/config-browser-test.mjs && node scripts/ipfs-missing-browser-test.mjs",
+    "test:cache": "node scripts/cache-browser-test.mjs",
+    "test:alchemy": "node scripts/alchemy-browser-test.mjs",
+    "check": "npm run typecheck && npm test && npm run build",
+    "test:release": "npm run check && npm run test:browser && npm run test:config && npm run test:opensea"
+  },
+  "dependencies": {
+    "gifenc": "^1.0.3",
+    "gifsicle-wasm-browser": "1.5.19",
+    "multiformats": "^13.3.7",
+    "viem": "^2.38.0"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.326",
+    "@types/node": "^22.0.0",
+    "esbuild": "^0.25.0",
+    "playwright": "^1.58.2",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

@@ -1,0 +1,63 @@
+import { build } from 'esbuild';
+import gifsicle from 'gifsicle-wasm-browser';
+import { cp, mkdir, rm, readFile, readdir, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { fileURLToPath } from 'node:url';
+
+// Resolve output paths from this script, never an arbitrary caller's directory.
+const projectRoot = fileURLToPath(new URL('..', import.meta.url));
+process.chdir(projectRoot);
+const bundle = options => build({ ...options, absWorkingDir: projectRoot });
+const pkg = JSON.parse(await readFile('package.json', 'utf8'));
+const lock = JSON.parse(await readFile('package-lock.json', 'utf8'));
+for (const file of ['public/manifest.json', 'companion/manifest.json']) {
+  const manifest = JSON.parse(await readFile(file, 'utf8'));
+  if (manifest.version !== pkg.version) throw new Error(`Version mismatch: ${file} must match package.json (${pkg.version}).`);
+}
+if (lock.version !== pkg.version || lock.packages[''].version !== pkg.version) throw new Error('package-lock.json version must match package.json.');
+// Package the pinned runtime as a normal module, avoiding blob workers/eval.
+let runtime = gifsicle.tool.workerLocalUrl;
+const wasm = runtime.match(/data:application\/wasm;base64,([A-Za-z0-9+/=]+)/);
+if (!wasm) throw new Error('Missing bundled GIF optimizer WebAssembly.');
+runtime = runtime.replace(wasm[0], 'gifsicle.wasm');
+const end = runtime.lastIndexOf(';onmessage=');
+if (end < 0 || /new Function|eval\(/.test(runtime)) throw new Error('Unexpected GIF optimizer runtime.');
+await rm('extension', { recursive: true, force: true });
+await mkdir('extension');
+await cp('public', 'extension', { recursive: true });
+await writeFile('extension/gifsicle.wasm', Buffer.from(wasm[1], 'base64'));
+await writeFile('extension/gifsicle-runtime.js', '/* gifsicle-wasm-browser 1.5.19, MIT; see THIRD_PARTY_NOTICES.txt */\n' + runtime.slice(0, end + 1) + '\nexport default gifsicle;\n');
+await bundle({ entryPoints: ['src/background.ts', 'src/results.ts', 'src/options.ts', 'src/launcher.ts'], outdir: 'extension', bundle: true, format: 'esm', splitting: true, target: 'chrome109', minify: true, legalComments: 'eof', metafile: false });
+await bundle({ entryPoints: ['src/theme.ts', 'src/html-media-sandbox.ts'], outdir: 'extension', bundle: true, format: 'iife', target: 'chrome109', minify: true });
+await bundle({ entryPoints: ['src/share-worker.ts', 'src/svg-worker.ts'], external: ['./gifsicle-runtime.js'], outdir: 'extension', bundle: true, format: 'esm', target: 'chrome109', minify: true, legalComments: 'eof' });
+let notices = 'tokint — third-party dependency notices\n\nIncludes notices for runtime dependencies. Unused portions may be removed by the bundler.\n';
+for (const [folder, entry] of Object.entries(lock.packages)) {
+  if (!folder || entry.dev) continue;
+  const pkg = JSON.parse(await readFile(`${folder}/package.json`, 'utf8'));
+  notices += `\n${'='.repeat(72)}\n${pkg.name} ${pkg.version} — ${pkg.license || 'See license below'}\n`;
+  const files = (await readdir(folder)).filter(name => /^(license|licence|copying)(\.|$)/i.test(name));
+  for (const file of files) notices += `\n${await readFile(`${folder}/${file}`, 'utf8')}\n`;
+}
+notices += '\nGifsicle 1.92 WebAssembly optimizer — GNU GPL v2\nSource and integration notes: vendor/gifsicle/ in the source distribution.\n' + await readFile('vendor/gifsicle/COPYING', 'utf8');
+await writeFile('extension/THIRD_PARTY_NOTICES.txt', notices);
+console.log('Ready to load: extension/');
+
+await rm('ipfs-extension', { recursive: true, force: true });
+await cp('companion', 'ipfs-extension', { recursive: true });
+await cp('public/styles.css', 'ipfs-extension/styles.css');
+await cp('public/icons', 'ipfs-extension/icons', { recursive: true });
+await bundle({ entryPoints: ['src/ipfs-background.ts', 'src/ipfs-options.ts'], outdir: 'ipfs-extension', bundle: true, format: 'esm', splitting: true, target: 'chrome109', minify: true, legalComments: 'eof' });
+await writeFile('ipfs-extension/THIRD_PARTY_NOTICES.txt', notices);
+console.log('Optional ipfs + Tab shortcut: ipfs-extension/');
+
+async function checksums(folder) {
+  const lines = [];
+  for (const entry of (await readdir(folder, { withFileTypes: true })).sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0)) {
+    const file = `${folder}/${entry.name}`;
+    if (entry.isDirectory()) lines.push(...await checksums(file));
+    else lines.push(`${createHash('sha256').update(await readFile(file)).digest('hex')}  ${file}`);
+  }
+  return lines;
+}
+await writeFile('SHA256SUMS.txt', [...await checksums('extension'), ...await checksums('ipfs-extension')].join('\n') + '\n');
+console.log('Updated SHA256SUMS.txt');

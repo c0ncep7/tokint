@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <title>tokint</title>
+  <rect x="3" y="3" width="122" height="122" rx="26" fill="#101512" stroke="#43513e" stroke-width="2"/>
+  <path fill="#b5f279" d="M49 25h18v22h28v17H67v22c0 7 4 10 11 10h12v17H77c-18 0-28-9-28-27V64H32V47h17z"/>
+  <rect x="79" y="25" width="16" height="16" rx="4" fill="#b5f279"/>
+</svg>
