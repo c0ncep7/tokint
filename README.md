@@ -12,6 +12,21 @@ A Chromium extension for Ethereum mainnet contract inspection, NFT metadata, IPF
 - Reopen recent tokens from a local cache, including offline when their content is cached.
 - Optionally use Alchemy for collection/wallet browsing and ownership/mint information.
 
+### What works with each provider
+
+| Function | PublicNode, dRPC, 1RPC, or a custom mainnet RPC | Alchemy mainnet RPC with NFT API access |
+| --- | --- | --- |
+| Inspect a known contract/token ID; view metadata and artwork | Yes | Yes |
+| `tokint` + Tab, toolbar detection, and IPFS links | Yes | Yes |
+| Original downloads, local conversion, and recent-token cache | Yes | Yes |
+| Browse tokens in a collection or public wallet | No | Yes, using Alchemy's NFT index |
+| View indexed owners and mint details | No | Yes, when indexed data is available |
+
+Start with the defaults for individual token lookups. [Enable Alchemy](#enable-alchemy)
+when you want to discover tokens without already knowing their IDs, browse a
+wallet, or look up ownership and mint information. The IPFS gateway is a separate
+setting and works with either choice of RPC provider.
+
 ## Install
 
 Use Chrome, Brave, or another Chromium browser that supports unpacked Manifest V3 extensions. The manifest requires Chromium 109 or later; use a current browser for media decoding and conversion support.
@@ -27,9 +42,26 @@ The manual-install ZIP, `tokint-<version>.zip`, contains `extension/`; extract i
 
 TOKINT uses one extension and one address-bar keyword: **`tokint` + Tab**. It recognizes Ethereum addresses, address/token-ID pairs, and IPFS references automatically. If upgrading from the former two-extension setup, remove the old **TOKINT IPFS** companion from the browser; it is no longer needed.
 
+### First lookup
+
+1. Keep the default PublicNode RPC and Pinata gateway in Settings; no account is needed.
+2. Type `tokint`, press **Tab**, paste `0xff9c1b15b16263c61d017ee9f65c50e4ae0113d7 1`, and press **Enter** to inspect Loot #1. Alternatively, open the toolbar inspector and enter the address and token ID in their separate fields.
+3. Review the metadata and artwork. If a referenced host needs permission, use **Allow and retry** to permit it.
+4. Use **Media source** when multiple assets are available, then the download icon to save the original or convert it locally. Successful metadata lookups appear in Recents.
+
+Public providers can be unavailable or rate-limited; the [error guidance](#privacy-permissions-and-errors)
+explains how to retry or change providers.
+
 ## Inspect a token
 
 Enter a full contract address and decimal token ID, then press **Enter** or click **Inspect**. **Auto detect** probes the standard metadata interfaces and tries `tokenURI` or `uri`; select a method manually for contracts that need it. Large token IDs retain full uint256 precision, and ERC-1155 `{id}` placeholders are expanded automatically. Custom metadata functions are not supported, and an ERC-1155 URI response alone does not prove a token exists.
+
+On a fresh lookup, TOKINT uses your RPC provider to read the contract's metadata
+URI, resolves IPFS references through your chosen gateway, and reads the returned
+JSON and referenced artwork. Embedded data is decoded locally. A usable cached
+snapshot can supply metadata and media instead; **Refresh** requests current data.
+The RPC provider supplies contract reads, the gateway or content host supplies
+files, and your browser performs display and conversion.
 
 The inspector shows the original metadata URI, resolved URL, JSON, attributes, and image preview. JSON is normally indented; large or deeply nested objects use compact formatting to keep display memory bounded. Metadata deeper than 64 object/array levels is rejected. Use the copy and external-link controls to inspect sources. The contract link opens Etherscan's Read Contract page. When metadata provides multiple distinct assets, the Media source dropdown in the preview footer switches between `image`, `animation_url`, `image_url`, inline SVG `image_data`, other media aliases, and `properties.files` entries. Duplicate media values share one entry; the selector is hidden when only one distinct value remains. The selected asset drives the preview, storage badge, source link, original download, and conversion tools. Animated image formats work from any of these fields. Base64 HTML animations also preview in an isolated sandbox. Audio and video remain outbound links. The OpenSea and OnChainChecker logos beneath the media open the submitted token on each service in a new tab. Both logos are bundled locally; the services are contacted only when you follow a link.
 
@@ -97,9 +129,9 @@ SVG export supports a bounded subset of declarative SMIL and CSS keyframe animat
 HTML previews accept `data:text/html` (base64 or percent-encoded) and HTTP responses with `text/html`. They run in a separate, opaque sandbox with no extension APIs, external requests, frames, forms, or popups. Original downloads retain the exact HTML bytes. Canvas exports sample the largest canvas using the existing GIF/WebP controls, with a 0.1–60 second clip and a 20 fps default. Sampling advances animation callbacks and JavaScript timers on a controlled clock; artwork relying on external resources, real-time input, or non-canvas DOM rendering may preview differently or have no convertible canvas. HTML input is limited to 2 MiB.
 
 
-## Settings and optional Alchemy features
+## Settings
 
-Open Settings with the inspector's gear icon. Changes apply after **Save settings**, on the next lookup.
+Open Settings with the inspector's gear icon. Click **Save settings** to apply changes to subsequent lookups. Alchemy controls also update in open inspector tabs when the saved RPC configuration changes.
 
 | Setting | Default | Purpose and choices |
 | --- | --- | --- |
@@ -113,13 +145,84 @@ Open Settings with the inspector's gear icon. Changes apply after **Save setting
 
 RPC and content requests require direct URLs: automatic HTTP redirects are blocked before contacting their destinations. If a provider or path-style gateway redirects, use its direct endpoint, choose another gateway/style, or follow the source link in a normal browser tab. The extension does not silently switch providers.
 
-For Alchemy, select **Alchemy (optional)** and enter your complete Ethereum mainnet HTTPS RPC URL. A valid configured URL enables:
+## Optional Alchemy features
 
-- **Browse collection:** tokens from a contract, up to 24 per page.
-- **Browse wallet:** tokens owned by a `0x` wallet address; ENS names are not supported.
-- **Ownership & mint:** indexed owners and available mint date, recipient, transaction, and block. “Minted to” identifies the recipient, not the creator. Owner lists stop at 100 addresses and disclose partial results.
+Alchemy serves two roles: its RPC endpoint handles the same contract reads as
+other providers, and its NFT API adds indexed collection, wallet, ownership, and
+mint information. TOKINT uses the same configured Alchemy application for both.
+These additional controls are hidden when the saved RPC URL is not a supported
+Alchemy endpoint.
 
-Requests begin only when you use these controls. Selecting a token opens its original contract metadata in the ordinary inspector. Optional **Load thumbnails** requests access to the supported Alchemy image hosts; thumbnails are temporary previews, not original download sources. Switching away from Alchemy hides these features and cancels pending requests. Indexed data can lag the chain. The configured Alchemy application must support its NFT API.
+### Enable Alchemy
+
+1. In the [Alchemy dashboard](https://dashboard.alchemy.com/), obtain the Ethereum mainnet HTTPS RPC URL for an application with NFT API access.
+2. Open TOKINT **Settings**, select **Alchemy (optional)** under **Ethereum mainnet RPC provider**, and paste the complete URL. TOKINT recognizes the form `https://eth-mainnet.g.alchemy.com/v2/<your-application-key>`; replace the placeholder with the URL supplied by Alchemy. An NFT API URL, another chain's URL, or a proxy/custom hostname does not enable these controls.
+3. Click **Save settings** and return to the inspector. Collection and wallet browse buttons appear beside the lookup controls. **Ownership & mint** becomes available when you submit a valid contract/token pair.
+4. On the first request, use **Allow and retry** if Chrome needs permission to contact Alchemy. Saving the URL enables the controls but does not verify that the application has working RPC and NFT API access.
+
+The complete endpoint is saved in this browser profile, including its application
+key. There is no separate TOKINT account or wallet connection. Alchemy receives
+the contract, token, or public wallet identifiers needed for your requests.
+See the [privacy policy](public/privacy.html) for storage and provider details.
+
+### Browse a collection or wallet
+
+| Control | How to use it | What happens |
+| --- | --- | --- |
+| **Browse collection** (grid icon) | Enter a complete contract address in the inspector, then click the icon. A token ID is not required. | The collection browser opens and immediately requests the first page. You can change the contract inside the dialog and click **Browse** again. |
+| **Browse wallet** (wallet icon) | Click the icon, enter a full `0x` wallet address, and click **Browse**. ENS names are not supported. | The browser lists tokens indexed as owned by that address across Ethereum mainnet collections. The wallet can be any public address; you do not connect it or prove ownership. |
+
+Results contain up to **24 tokens per page**. Use **Next** and **Previous** to
+navigate; Next is available only when Alchemy supplies another page. Cards show
+the indexed name, token ID, and contract identity. Invalid entries may be omitted.
+Clicking a card closes the browser and submits that contract/token pair to the
+normal inspector using **Auto detect**. Its metadata and selected artwork follow
+the normal RPC/gateway/cache path, with the same original-download and conversion
+controls. The browse-card thumbnail is not used as the original artwork.
+
+Address-bar inputs keep their normal meaning with Alchemy enabled: a bare address
+opens Etherscan, and an address plus token ID opens the inspector. Use **Browse
+wallet** for wallet holdings; the address-bar command does not infer that intent.
+
+### Thumbnails and ownership details
+
+Browse cards work without images. **Load thumbnails** requests access to
+`nft-cdn.alchemy.com` and Alchemy's resources on `res.cloudinary.com`. Once that
+permission is granted, eligible thumbnails load automatically on subsequent
+browse pages. Missing, unsupported, or failed thumbnails leave the token cards
+usable. Thumbnails are temporary previews and are not added to the recent-token
+media cache; optional site access can be revoked in the browser's extension controls.
+
+After submitting a token, expand **Ownership & mint** to request its indexed
+owners and available mint date, recipient, transaction, and block. Addresses,
+transactions, and blocks link to Etherscan. **Minted to** is the mint recipient,
+which does not establish who created the artwork. Owner output is capped at
+**100 addresses**; when coverage is incomplete, **Partial list · View holders**
+links to Etherscan. Missing indexed fields appear as unavailable.
+
+Use **Refresh Alchemy details** inside this panel to request updated index data.
+The displayed **Queried** time records when TOKINT requested it, not the age of
+Alchemy's underlying index. An expanded panel also reloads when you submit another
+token; there is no background polling. Alchemy results can lag the chain or omit
+tokens/details. Browsing and ownership results require a network connection and
+are separate from the inspector's local recent-token cache.
+
+### Alchemy troubleshooting and disabling
+
+| Symptom | Check or action |
+| --- | --- |
+| Alchemy buttons are hidden | Save the supported Ethereum mainnet RPC URL shown above. Other networks, proxy hosts, and placeholder URLs do not enable the features. |
+| Browse collection is disabled | Enter a valid full contract address in the inspector. A token ID is not needed for collection browsing. |
+| Host access was not granted | Use **Allow and retry** and approve the requested Alchemy host if you want the lookup to proceed. Thumbnail host access is separate. |
+| Configuration rejected / HTTP 401 or 403 | Check the endpoint and the application's NFT API access in Alchemy. A successful RPC lookup does not prove NFT API access is available. |
+| Rate limited / HTTP 429 | Wait before retrying and check the application's usage limits in Alchemy. |
+| No tokens, missing mint fields, or partial owners | Confirm the address/token and Ethereum mainnet. Index coverage can be incomplete or delayed; use the available Etherscan links to investigate. |
+
+To disable the extra features, choose another RPC provider and **Save settings**.
+TOKINT hides the Alchemy controls, closes its browse dialog, and cancels pending
+Alchemy requests. Core inspection, IPFS, downloads, conversion, and Recents remain
+available with the selected provider. Changing the RPC configuration makes earlier
+token-cache snapshots ineligible for reuse.
 
 ## Privacy, permissions, and errors
 
@@ -217,6 +320,17 @@ SVG_FILE=/path/to/art.svg EDGE=1000 FPS=25 CLIP_SECONDS=11.2 node scripts/animat
 ```
 
 The interactive tool opens an isolated manual-test browser. The icon tool renders `public/icons/tokint.svg` to PNGs; rebuild afterward. SVG tools use a local artwork file without adding it to the extension; animation review generates sampling/encoding measurements rather than a release pass/fail result.
+
+### Keeping this README current
+
+Update this README in the same change as any user-visible feature, setting,
+permission, limit, or release command. Check core lookup behavior against
+`src/core.ts`, `src/chain.ts`, and `src/results.ts`; Alchemy behavior against
+`src/alchemy.ts`, `src/alchemy-ui.ts`, and `src/rpc-presets.ts`; UI labels against
+`public/results.html` and `public/options.html`; and development commands against
+`package.json`. Changes to data handling also need matching updates to the privacy
+policy and Web Store declarations. Regenerate release packages after documentation
+changes so their source archive contains the current README.
 
 ### Source layout and distribution
 
