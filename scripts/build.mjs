@@ -29,7 +29,7 @@ const end = runtime.lastIndexOf(';onmessage=');
 if (end < 0 || /new Function|eval\(/.test(runtime)) throw new Error('Unexpected GIF optimizer runtime.');
 await rm('extension', { recursive: true, force: true });
 await mkdir('extension');
-await cp('public', 'extension', { recursive: true });
+await cp('public', 'extension', { recursive: true, filter: source => !source.endsWith('/tokint.svg') && !source.endsWith('/.DS_Store') });
 await writeFile('extension/gifsicle.wasm', Buffer.from(wasm[1], 'base64'));
 await writeFile('extension/gifsicle-runtime.js', '/* gifsicle-wasm-browser 1.5.19, MIT; see THIRD_PARTY_NOTICES.txt */\n' + runtime.slice(0, end + 1) + '\nexport default gifsicle;\n');
 await bundle({ entryPoints: ['src/background.ts', 'src/results.ts', 'src/options.ts', 'src/launcher.ts'], outdir: 'extension', bundle: true, format: 'esm', splitting: true, target: 'chrome109', minify: true, legalComments: 'eof' });
@@ -50,7 +50,10 @@ console.log('Ready to load: extension/');
 await rm('ipfs-extension', { recursive: true, force: true });
 await cp('companion', 'ipfs-extension', { recursive: true });
 await cp('public/styles.css', 'ipfs-extension/styles.css');
-await cp('public/icons', 'ipfs-extension/icons', { recursive: true });
+await mkdir('ipfs-extension/icons');
+for (const icon of ['tokint-16.png', 'tokint-32.png', 'tokint-48.png', 'tokint-128.png', 'tokint-mark.svg', 'tokint-wordmark.svg']) {
+  await cp(`public/icons/${icon}`, `ipfs-extension/icons/${icon}`);
+}
 await bundle({ entryPoints: ['src/ipfs-background.ts', 'src/ipfs-options.ts'], outdir: 'ipfs-extension', bundle: true, format: 'esm', splitting: true, target: 'chrome109', minify: true, legalComments: 'eof' });
 await writeFile('ipfs-extension/THIRD_PARTY_NOTICES.txt', notices);
 console.log('Optional ipfs + Tab shortcut: ipfs-extension/');

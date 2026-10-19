@@ -1,13 +1,52 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Failure } from '../src/core';
-import { loadImage, loadMedia, loadMetadata, requestBytes, type NetworkOptions } from '../src/network';
+import { loadImage, loadMedia, loadMetadata, loadPreview, PREVIEW_BYTES, requestBytes, type NetworkOptions } from '../src/network';
 const permitted = async () => true;
 const mock = (response: Response): NetworkOptions => ({ permitted, fetcher: async () => response });
 test('missing permission stops network access and identifies the host grant', async () => {
   let calls = 0;
   await assert.rejects(loadMetadata('https://metadata.example/item', { permitted: async () => false, fetcher: async () => { calls++; return new Response('{}'); } }), (e: unknown) => e instanceof Failure && e.kind === 'permission' && e.origin === 'https://metadata.example/*');
   assert.equal(calls, 0);
+});
+test('redirects fail closed before response bodies are read and cannot be enabled by callers', async () => {
+  for (const kind of ['rpc', 'metadata', 'gateway', 'image'] as const) {
+    for (const status of [301, 302, 303, 307, 308]) {
+      let stopped = false;
+      await assert.rejects(requestBytes('https://allowed.example/start', kind, 1000, {
+        permitted,
+        fetcher: async (_url, init) => {
+          assert.equal(init?.redirect, 'manual');
+          assert.equal(init?.credentials, 'omit');
+          assert.equal(init?.referrerPolicy, 'no-referrer');
+          init?.signal?.addEventListener('abort', () => { stopped = true; });
+          return new Response(null, { status, headers: { Location: 'https://unapproved.example/' } });
+        },
+      }, { redirect: 'follow', credentials: 'include' }), (e: unknown) => e instanceof Failure && e.kind === kind && /redirects are blocked/.test(e.message));
+      assert.equal(stopped, true);
+    }
+  }
+  const response = new Response();
+  Object.defineProperties(response, { type: { value: 'opaqueredirect' }, status: { value: 0 } });
+  await assert.rejects(loadMetadata('https://allowed.example/start', mock(response)), /redirects are blocked/);
+});
+test('automatic previews reject oversized declared and streamed bodies while originals remain available', async () => {
+  await assert.rejects(loadPreview('https://example.com/large.gif', mock(new Response('GIF89a', { headers: { 'Content-Type': 'image/gif', 'Content-Length': String(PREVIEW_BYTES + 1) } }))), /exceeds/);
+  let cancelled = false;
+  const chunk = new Uint8Array(1024 * 1024);
+  const stream = new ReadableStream<Uint8Array>({ pull(controller) { controller.enqueue(chunk); }, cancel() { cancelled = true; } });
+  await assert.rejects(loadPreview('https://example.com/large.gif', mock(new Response(stream, { headers: { 'Content-Type': 'image/gif' } }))), /exceeds/);
+  assert.equal(cancelled, true);
+  const original = await loadMedia('https://example.com/large.gif', mock(new Response('GIF89a', { headers: { 'Content-Type': 'image/gif', 'Content-Length': String(PREVIEW_BYTES + 1) } })));
+  assert.equal(original.size, 6);
+});
+test('automatic previews honor their timeout while streaming', async () => {
+  await assert.rejects(loadPreview('https://example.com/slow.gif', {
+    permitted, timeoutMs: 5,
+    fetcher: async (_url, init) => new Response(new ReadableStream({ start(stream) {
+      init?.signal?.addEventListener('abort', () => stream.error(new DOMException('aborted', 'AbortError')));
+    } }), { headers: { 'Content-Type': 'image/gif' } }),
+  }), /timed out/);
 });
 test('HTTP 429 is classified as a gateway failure with retry advice', async () => {
   await assert.rejects(loadMetadata('https://example.com/a', mock(new Response('', { status: 429 })), true), (e: unknown) => e instanceof Failure && e.kind === 'gateway' && /rate limited/.test(e.message));

@@ -107,7 +107,6 @@ try {
     assert.equal(await page.locator(`#${id} svg`).count(), 1);
   }
   assert.equal(await page.locator('#recent-controls').isVisible(), false);
-  assert.equal(await page.locator('.shortcut-hint').count(), 0);
   await page.getByRole('button', { name: 'Help', exact: true }).click();
   assert.equal(await page.locator('#info-modal').evaluate(d => d.open), true);
   assert.match(await page.locator('#info-modal').textContent(), /address tokenId/);
@@ -150,7 +149,6 @@ try {
   assert.equal(await page.locator('#image').evaluate(img => img.naturalWidth), 800);
   assert.equal(await page.locator('#image-link').getAttribute('href'), `${gateway}/media/1.svg`);
   assert.equal(await page.locator('.metadata-card #json').count(), 1);
-  assert.equal(await page.locator('.json-card').count(), 0);
   assert.equal(await page.locator('#json img').count(), 0);
   assert.equal(await page.evaluate(() => window.metadataExecuted), undefined);
   for (const type of ['key', 'string', 'number', 'boolean', 'null']) assert.ok(await page.locator(`#json .json-${type}`).count() > 0);

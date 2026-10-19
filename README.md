@@ -4,6 +4,14 @@
 
 A Chromium extension for Ethereum mainnet contract inspection, NFT metadata, IPFS links, and local image conversion. Requests go directly from your browser to the configured providers. No wallet, signing, or account is required for the core features.
 
+## Core functionality
+
+- Inspect Ethereum mainnet ERC-721/1155 metadata using a contract address and exact token ID.
+- Open contract, token, and IPFS lookups from the address bar, or detect a token from the current tab using the toolbar button.
+- View JSON, attributes, storage locations, and selectable artwork; download originals or convert supported images and animations locally.
+- Reopen recent tokens from a local cache, including offline when their content is cached.
+- Optionally use Alchemy for collection/wallet browsing and ownership/mint information.
+
 ## Install
 
 Use Chrome, Brave, or another Chromium browser that supports unpacked Manifest V3 extensions. The manifests require Chromium 109 or later; use a current browser for media decoding and conversion support.
@@ -32,7 +40,7 @@ The companion reads the main extension's saved gateway on each submission. It ha
 
 Enter a full contract address and decimal token ID, then press **Enter** or click **Inspect**. **Auto detect** probes the standard metadata interfaces and tries `tokenURI` or `uri`; select a method manually for contracts that need it. Large token IDs retain full uint256 precision, and ERC-1155 `{id}` placeholders are expanded automatically. Custom metadata functions are not supported, and an ERC-1155 URI response alone does not prove a token exists.
 
-The inspector shows the original metadata response, resolved URL, formatted JSON, attributes, and image preview. Use the copy and external-link controls to inspect sources. The contract link opens Etherscan's Read Contract page. When metadata provides multiple distinct assets, the Media source dropdown in the preview footer switches between `image`, `animation_url`, `image_url`, inline SVG `image_data`, other media aliases, and `properties.files` entries. Duplicate media values share one entry; the selector is hidden when only one distinct value remains. The selected asset drives the preview, storage badge, source link, original download, and conversion tools. Animated image formats work from any of these fields. Base64 HTML animations also preview in an isolated sandbox. Audio and video remain outbound links. The OpenSea and OnChainChecker logos beneath the media open the submitted token on each service in a new tab. Both logos are bundled locally; the services are contacted only when you follow a link.
+The inspector shows the original metadata URI, resolved URL, JSON, attributes, and image preview. JSON is normally indented; large or deeply nested objects use compact formatting to keep display memory bounded. Metadata deeper than 64 object/array levels is rejected. Use the copy and external-link controls to inspect sources. The contract link opens Etherscan's Read Contract page. When metadata provides multiple distinct assets, the Media source dropdown in the preview footer switches between `image`, `animation_url`, `image_url`, inline SVG `image_data`, other media aliases, and `properties.files` entries. Duplicate media values share one entry; the selector is hidden when only one distinct value remains. The selected asset drives the preview, storage badge, source link, original download, and conversion tools. Animated image formats work from any of these fields. Base64 HTML animations also preview in an isolated sandbox. Audio and video remain outbound links. The OpenSea and OnChainChecker logos beneath the media open the submitted token on each service in a new tab. Both logos are bundled locally; the services are contacted only when you follow a link.
 
 Click the toolbar button on an OpenSea, SuperRare, or other HTTP(S) page with adjacent `/contract-address/token-ID` path segments to open that token automatically. The source tab stays open. Unsupported or ambiguous URLs require manual entry. Only Ethereum mainnet is supported: recognized non-mainnet labels are rejected, while unlabeled URLs are assumed to be mainnet. Website URL conventions cannot reliably identify every chain.
 
@@ -90,7 +98,7 @@ remain available. Updating the browser may enable additional conversion formats.
 - Changing options, closing the dialog, cancelling, or loading another token stops pending conversion and clears stale exports.
 - Filenames use the loaded token's full lowercase address and exact ID: `0x<contract>--123--media.png` for originals or `0x<contract>--123--web.gif` for conversions.
 
-Original previews and downloads have no application file-size cap or fixed total timeout; browser memory and decoding limits still apply. Conversion has a separate **100 MiB input limit**. Raster conversion allows up to 32 million pixels per frame, 1000 frames, 160 million total source pixels, and 10 minutes of source animation, with a two-minute generation timeout.
+Automatic remote previews have a **100 MiB download limit** and a **30-second timeout**. If a preview is too large or slow, use **Download/Convert → Original** to retrieve it explicitly, or open its source URL. Explicit original downloads have no application file-size cap or fixed total timeout; browser memory and decoding limits still apply. Conversion has a separate **100 MiB input limit**. Raster conversion allows up to 32 million pixels per frame, 1000 frames, 160 million total source pixels, and 10 minutes of source animation, with a two-minute generation timeout.
 
 SVG export supports a bounded subset of declarative SMIL and CSS keyframe animation. Scripts, event-based timing, embedded HTML/images, external assets/fonts, and unsupported timing patterns are rejected for conversion. SVG limits are 2 MiB of markup, 10,000 elements, 32 million source pixels, 3000 output frames, and five minutes of generation. Unsupported artwork can still be downloaded unchanged. SVG is decoded as an image, never inserted as live markup into the extension page.
 
@@ -99,7 +107,20 @@ HTML previews accept `data:text/html` (base64 or percent-encoded) and HTTP respo
 
 ## Settings and optional Alchemy features
 
-The default RPC is `https://ethereum-rpc.publicnode.com`; the default IPFS gateway is `https://gateway.pinata.cloud` with **Path** style. Settings also offers dRPC, 1RPC, Alchemy, custom RPC, and Filebase/IPFS.io/dweb.link gateway presets. Custom gateways take a base URL without `/ipfs/`. Save changes before submitting another lookup. RPC endpoints must report chain ID 1.
+Open Settings with the inspector's gear icon. Changes apply after **Save settings**, on the next lookup.
+
+| Setting | Default | Purpose and choices |
+| --- | --- | --- |
+| Ethereum mainnet RPC provider | PublicNode | PublicNode, dRPC, 1RPC, optional Alchemy, or Custom RPC. Used for contract reads; the endpoint must report chain ID 1. |
+| Ethereum mainnet RPC URL | `https://ethereum-rpc.publicnode.com` | Presets fill this automatically. Custom endpoints accept HTTP(S) without embedded username/password credentials. Use HTTPS for remote providers. |
+| Public IPFS gateway | Pinata | Pinata, Filebase, IPFS.io, dweb.link, or Custom gateway. IPFS references are resolved through this provider. |
+| IPFS gateway base URL | `https://gateway.pinata.cloud` | A base URL with no `/ipfs/` path, query, or fragment. Select Custom gateway to edit it. |
+| Gateway URL style | Path | Path produces `gateway/ipfs/CID/path`; Subdomain produces `CID.ipfs.gateway/path`. Localhost/IP-address gateways require Path. Presets choose their own style. |
+| IPFS address-bar shortcut | Disconnected | Connect the optional companion so `ipfs` + Tab follows the saved gateway. |
+
+**Restore defaults** fills the form; click **Save settings** to apply it. Theme is changed separately with the sun/moon button. Clearing Recents removes history and cached files without changing settings.
+
+RPC and content requests require direct URLs: automatic HTTP redirects are blocked before contacting their destinations. If a provider or path-style gateway redirects, use its direct endpoint, choose another gateway/style, or follow the source link in a normal browser tab. The extension does not silently switch providers.
 
 For Alchemy, select **Alchemy (optional)** and enter your complete Ethereum mainnet HTTPS RPC URL. A valid configured URL enables:
 
@@ -113,7 +134,7 @@ Requests begin only when you use these controls. Selecting a token opens its ori
 
 Settings, the last contract, theme, and recent tokens stay in local browser storage. Providers receive the RPC/content requests you submit. There are no analytics, wallet connections, signing requests, content scripts, or background polling. Toolbar detection uses temporary `activeTab` access and reads the clicked tab's URL without fetching or injecting into its page.
 
-The main extension requests storage, `activeTab`, and host access for PublicNode, Pinata, OpenSea, and Arweave. Other HTTP(S) hosts are optional. **Allow and retry** requests access after a user click; declining leaves source links available. Revoke optional access through the browser's extension management page. Redirect destinations are checked before their response bodies are read; see [verification notes](VERIFICATION.md) for the outstanding redirect-consent test.
+The main extension requests storage, `activeTab`, and host access for PublicNode, Pinata, and Arweave. OpenSea toolbar detection needs no permanent OpenSea host permission. Other HTTP(S) hosts are optional. **Allow and retry** requests access after a user click; declining leaves source links available. Revoke optional access through the browser's extension management page. Requests omit cookies and referrers. Automatic redirects, including same-host redirects, are blocked before following them; outbound links use the browser's normal navigation behavior. See [verification notes](VERIFICATION.md) for the tested security boundaries.
 
 | Error | Suggested action |
 | --- | --- |
@@ -121,9 +142,10 @@ The main extension requests storage, `activeTab`, and host access for PublicNode
 | RPC | Retry or change provider; confirm Ethereum mainnet |
 | GATEWAY / METADATA | Check host access, source URL, and provider availability |
 | JSON | Open the source; the response must be a JSON object |
-| IMAGE | Keep using the metadata; retry or open the original source |
+| IMAGE | Keep using the metadata; retry, download Original explicitly, or open the source |
+| Redirect blocked | Use a direct RPC/gateway endpoint, or open the source in a browser tab |
 
-RPC requests have a 15-second/8-MiB bound; metadata has a 30-second/2-MiB bound. Alchemy data requests use 15 seconds/8 MiB, and thumbnails 10 seconds/2 MiB. Public services can rate-limit or fail; tokint does not silently switch providers. IPFS gateways are trusted HTTP gateways: content hashes are not independently verified. CCIP Read / OffchainLookup is disabled.
+RPC requests have a 15-second/8-MiB bound; metadata has a 30-second/2-MiB bound and a 64-level nesting limit. Alchemy data requests use 15 seconds/8 MiB, and thumbnails 10 seconds/2 MiB. Public services can rate-limit or fail; tokint does not silently switch providers. IPFS gateways are trusted HTTP gateways: content hashes are not independently verified. CCIP Read / OffchainLookup is disabled.
 
 ## Update
 
@@ -165,7 +187,7 @@ npx playwright install chromium
 npm run test:release
 ```
 
-Browser tests use temporary profiles and mocked RPC/content responses, with output under `test-results/`. Set `CHROMIUM_EXECUTABLE` to a compatible Chrome for Testing or Chromium-based browser executable if needed. The toolbar suite requires the experimental `Extensions.triggerAction` debugging API. Tests do not access your personal browser profile or upload artwork.
+Browser tests use temporary profiles and local fixtures, with output under `test-results/`. Most RPC/content responses are mocked; the security suite uses real loopback HTTP servers to verify redirect handling, and the sharing suite streams a real 101 MiB original to verify preview limits and explicit downloads. Set `CHROMIUM_EXECUTABLE` to a compatible Chrome for Testing or Chromium-based browser executable if needed. The toolbar suite requires the experimental `Extensions.triggerAction` debugging API. Tests do not access your personal browser profile or upload artwork.
 
 | Command | Scope |
 | --- | --- |
@@ -179,11 +201,12 @@ Browser tests use temporary profiles and mocked RPC/content responses, with outp
 | `npm run test:opensea` | Actual toolbar actions, including generic token URLs |
 | `npm run test:cache` / `npm run test:alchemy` | Focused browser suites |
 | `npm run test:live` | Optional read-only mainnet and IPFS checks; requires network access |
-| `npm run test:release` | Typecheck, units, build, and all standard browser suites including offline conversion |
+| `npm run test:security` | Real-browser redirect consent, RPC POST isolation, metadata resource bounds, and preview limits |
+| `npm run test:release` | Typecheck, units, build, and all standard browser suites including offline conversion and security |
 
-Run `npm outdated` and `npm audit` with registry access before release. All declared dependencies are used; `gifsicle-wasm-browser` is pinned because the build extracts its embedded runtime. See [VERIFICATION.md](VERIFICATION.md) for actual results and outstanding checks.
+Run `npm audit` with registry access before each release; use `npm outdated` when planning dependency updates. All declared dependencies are used; `gifsicle-wasm-browser` is pinned because the build extracts its embedded runtime. See [VERIFICATION.md](VERIFICATION.md) for actual results and outstanding checks.
 
-The original TOKINT artwork is preserved in `docs/branding/tokint-reference.png`. Editable icon, mark, and wordmark SVGs live in `public/icons/`. After changing the icon master (`tokint.svg`), run `node scripts/render-icons.mjs` to regenerate all PNG sizes, then rebuild both extensions.
+The original TOKINT artwork is preserved in `docs/branding/tokint-reference.png`. Editable icon, mark, and wordmark SVGs live in `public/icons/`. After changing the icon master (`tokint.svg`), run `node scripts/render-icons.mjs` to regenerate the 16, 32, 48, and 128 px PNGs, then rebuild both extensions. The editable master stays in source; release builds include only the assets each extension uses.
 
 Additional tools:
 

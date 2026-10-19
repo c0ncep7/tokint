@@ -30,8 +30,6 @@
   "host_permissions": [
     "https://ethereum-rpc.publicnode.com/*",
     "https://gateway.pinata.cloud/*",
-    "https://opensea.io/*",
-    "https://www.opensea.io/*",
     "https://*.arweave.net/*"
   ],
   "optional_host_permissions": [

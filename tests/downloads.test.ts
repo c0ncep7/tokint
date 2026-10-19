@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { downloadName, embeddedImageBlob, embeddedMediaBlob, mediaExtension } from '../src/downloads';
+import { downloadName, embeddedMediaBlob, mediaExtension } from '../src/downloads';
 
 const contract = '0x00000000000000000000000000000000000000AB';
 test('download names use the complete contract and lossless decimal token ID', () => {
@@ -11,24 +11,20 @@ test('download names use the complete contract and lossless decimal token ID', (
 test('base64 and percent-encoded SVG downloads preserve the original bytes', async () => {
   const svg = '<svg xmlns="http://www.w3.org/2000/svg"><text>Café 🌱</text></svg>';
   for (const uri of [`data:image/svg+xml,${encodeURIComponent(svg)}`, `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`]) {
-    const blob = embeddedImageBlob(uri);
+    const blob = embeddedMediaBlob(uri);
     assert.equal(blob.type, 'image/svg+xml');
     assert.equal(await blob.text(), svg);
     assert.equal(await mediaExtension(blob, uri), 'svg');
   }
 });
-test('embedded downloads reject executable HTML and broken data', () => {
-  assert.throws(() => embeddedImageBlob('data:text/html,<script/>'));
-  assert.throws(() => embeddedImageBlob('data:image/png;base64,%%%%'));
-});
-test('HTML media decodes separately from images and preserves original base64 bytes', async () => {
+test('HTML media preserves original base64 bytes and rejects unsupported or broken data', async () => {
   const html = '<!doctype html><canvas width="32" height="32"></canvas><script>requestAnimationFrame(() => {});</script>';
   const uri = `data:text/html;base64,${Buffer.from(html).toString('base64')}`;
   const blob = embeddedMediaBlob(uri);
   assert.equal(blob.type, 'text/html');
   assert.equal(await blob.text(), html);
   assert.equal(await mediaExtension(blob, uri), 'html');
-  assert.throws(() => embeddedImageBlob(uri));
+  assert.throws(() => embeddedMediaBlob('data:image/png;base64,%%%%'));
   assert.throws(() => embeddedMediaBlob('data:text/javascript;base64,YWxlcnQoMSk='));
   assert.throws(() => embeddedMediaBlob('data:text/html;base64,%%%%'));
 });

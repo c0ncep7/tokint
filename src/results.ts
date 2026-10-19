@@ -3,9 +3,9 @@ import { storageLocation, type StorageLocation } from './storage-location';
 import { createAlchemyUI } from './alchemy-ui';
 import { cacheKey, cacheScope, clearCache, readCache, rememberImage, rememberToken, usableSnapshot, type RecentToken, type Snapshot } from './token-cache';
 import { renderJson } from './json-view';
-import { address, explorer, Failure, httpUrl, htmlDataUri, imageDataUri, LatestRequest, parseIpfs, resolveUri, substituteId, tokenId, type Method } from './core';
+import { address, explorer, Failure, formatMetadata, httpUrl, htmlDataUri, imageDataUri, LatestRequest, parseIpfs, resolveUri, substituteId, tokenId, type Method } from './core';
 import { readTokenUri } from './chain';
-import { loadMedia, loadMetadata } from './network';
+import { loadPreview, loadMetadata } from './network';
 import { getLastContract, getSettings, saveLastContract } from './storage';
 import { embeddedMediaBlob, mediaExtension } from './downloads';
 import { createMediaModal } from './media-modal';
@@ -201,7 +201,7 @@ function showMetadata(data: Record<string, unknown>, id: bigint) {
   el('name').textContent = typeof data.name === 'string' && data.name ? data.name : `Token #${id}`;
   image.alt = typeof data.name === 'string' ? data.name : `Artwork for token ${id}`;
   el('description').textContent = typeof data.description === 'string' ? data.description : 'No description in this metadata.';
-  jsonText = JSON.stringify(data, null, 2);
+  jsonText = formatMetadata(data);
   renderJson(el('json'), jsonText); el<HTMLButtonElement>('copy-json').disabled = false;
   const attributes = el('attributes');
   if (Array.isArray(data.attributes)) {
@@ -221,7 +221,7 @@ async function preview(url: string, ticket: Ticket, cachedImage?: Blob, cache?: 
 
   imageNote('Loading media…', true);
   try {
-    const blob = cachedImage ?? (url.startsWith('data:') ? embeddedMediaBlob(url) : await loadMedia(url, { signal: ticket.signal }));
+    const blob = cachedImage ?? (url.startsWith('data:') ? embeddedMediaBlob(url) : await loadPreview(url, { signal: ticket.signal }));
     const extension = await mediaExtension(blob, url);
     const svgSize = extension === 'svg' ? await svgDimensions(blob).catch(() => undefined) : undefined;
     if (!ticket.current()) return;

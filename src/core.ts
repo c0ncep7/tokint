@@ -114,13 +114,33 @@ export function readDataJson(uri: string): Record<string, unknown> {
   } catch (e) { if (e instanceof Failure) throw e; throw new Failure('json', 'The embedded JSON could not be decoded.'); }
 }
 export const MAX_METADATA = 2 * 1024 * 1024;
+function metadataDepth(data: Record<string, unknown>): number {
+  const pending: { value: unknown; depth: number }[] = [{ value: data, depth: 1 }];
+  let maximum = 0;
+  while (pending.length) {
+    const { value, depth } = pending.pop()!;
+    if (!value || typeof value !== 'object') continue;
+    if (depth > 64) throw new Failure('json', 'Metadata exceeds the 64-level nesting limit. Open the source URL to inspect it.');
+    maximum = Math.max(maximum, depth);
+    for (const child of Object.values(value)) if (child && typeof child === 'object') pending.push({ value: child, depth: depth + 1 });
+  }
+  return maximum;
+}
+export function formatMetadata(data: Record<string, unknown>): string {
+  const depth = metadataDepth(data);
+  const compact = JSON.stringify(data);
+  // Conservative upper bound: each compact character could add a newline and
+  // indentation. Decide before pretty-printing, which can amplify small inputs.
+  return compact.length * (2 * depth + 3) <= MAX_METADATA ? JSON.stringify(data, null, 2) : compact;
+}
 export function parseMetadata(text: string): Record<string, unknown> {
   if (new TextEncoder().encode(text).length > MAX_METADATA) throw new Failure('json', 'Metadata exceeds the 2 MB limit. Open the source URL to inspect it.');
   try {
     const data: unknown = JSON.parse(text);
     if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error();
+    metadataDepth(data as Record<string, unknown>);
     return data as Record<string, unknown>;
-  } catch { throw new Failure('json', 'The response is not a JSON object. Open the source URL to inspect it.'); }
+  } catch (error) { if (error instanceof Failure) throw error; throw new Failure('json', 'The response is not a JSON object. Open the source URL to inspect it.'); }
 }
 export class LatestRequest {
   private controller?: AbortController;

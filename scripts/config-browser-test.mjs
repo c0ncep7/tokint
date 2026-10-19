@@ -96,7 +96,6 @@ try {
   assert.equal(await page.locator('#read-contract svg').count(), 1);
   assert.equal(await page.locator('#read-contract').getAttribute('aria-label'), 'Read contract on Etherscan');
   assert.equal(await page.locator('#metadata-link').getAttribute('aria-label'), 'Open metadata');
-  assert.equal(await page.locator('.source-actions').count(), 0);
   await page.locator('#contract').fill('0x0000000000000000000000000000000000000001');
   const opened = context.waitForEvent('page');
   await context.route('https://etherscan.io/**', route => route.fulfill({ body: 'Etherscan fixture' }));

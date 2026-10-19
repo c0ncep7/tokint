@@ -21,10 +21,11 @@ async function requestBody(url: string, kind: 'rpc' | 'metadata' | 'gateway' | '
   const timeoutMs = opts.timeoutMs ?? (kind === 'image' ? 0 : kind === 'rpc' ? 15_000 : 30_000);
   const timer = timeoutMs > 0 ? setTimeout(() => { timedOut = true; controller.abort(); }, timeoutMs) : undefined;
   try {
-    const response = await (opts.fetcher ?? fetch)(url, { ...init, signal: controller.signal, credentials: 'omit', referrerPolicy: 'no-referrer', cache: 'no-store' });
+    // Fetch hides manual redirect destinations. Fail closed rather than contacting
+    // an unapproved intermediate host (including an allowed A -> unknown B -> A).
+    const response = await (opts.fetcher ?? fetch)(url, { ...init, signal: controller.signal, credentials: 'omit', referrerPolicy: 'no-referrer', cache: 'no-store', redirect: 'manual' });
+    if (response.type === 'opaqueredirect' || response.redirected || (response.status >= 300 && response.status < 400)) throw new Failure(kind, 'This host redirects requests. Automatic redirects are blocked. Use a direct endpoint in Settings or open the source URL in a browser tab.');
     if (!response.ok) throw new Failure(kind, `${kind === 'rpc' ? 'RPC' : kind === 'gateway' ? 'IPFS gateway' : kind === 'image' ? 'Image host' : 'Metadata host'} returned HTTP ${response.status}${response.status === 429 ? ' (rate limited). Wait a moment, then retry.' : '.'}`);
-    // Redirected responses may need a second host grant before we read their body.
-    if (response.url && new URL(response.url).origin !== new URL(url).origin) await requireAccess(response.url, opts);
     const contentType = response.headers.get('content-type') || '';
     // Let the browser spool unlimited originals into a Blob instead of collecting
     // chunks and allocating a second full-size JavaScript byte array.
@@ -52,6 +53,8 @@ async function requestBody(url: string, kind: 'rpc' | 'metadata' | 'gateway' | '
     if (error instanceof Failure) throw error;
     throw new Failure(kind, 'The request could not reach the host. Check your connection, host access, or endpoint settings, then retry.');
   } finally {
+    // Stop the underlying transfer on rejected headers/status, not just its timer.
+    controller.abort();
     clearTimeout(timer);
     opts.signal?.removeEventListener('abort', abort);
   }
@@ -70,6 +73,10 @@ export async function loadMetadata(url: string, opts: NetworkOptions = {}, ipfs 
 }
 export async function loadImage(url: string, opts: NetworkOptions = {}, maxBytes = Infinity): Promise<Blob> {
   return loadMedia(url, opts, maxBytes, false);
+}
+export const PREVIEW_BYTES = 100 * 1024 * 1024;
+export async function loadPreview(url: string, opts: NetworkOptions = {}): Promise<Blob> {
+  return loadMedia(url, { ...opts, timeoutMs: opts.timeoutMs ?? 30_000 }, PREVIEW_BYTES);
 }
 export async function loadMedia(url: string, opts: NetworkOptions = {}, maxBytes = Infinity, allowHtml = true): Promise<Blob> {
   const result = await requestBody(url, 'image', maxBytes, opts);

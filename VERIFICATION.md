@@ -1,64 +1,99 @@
 # Release verification
 
-Reviewed on October 18, 2026, with a packaging and browser-support follow-up on the same date. Package and both extension manifests are **1.0.0** for the first release.
+Reviewed October 18, 2026. Package and both extension manifests remain **1.0.0**.
+This records the current checkout's checks and remaining release work.
 
-## Packaging and browser-support follow-up
+## Security review and fixes
 
-- Token-service links: bundled OpenSea and OnChainChecker logos now appear beneath the media and link to the submitted Ethereum contract/token. The official OpenSea item URL and OnChainChecker's documented collection URL were checked. TypeScript, all 121 unit tests, and builds passed. An isolated browser smoke check verified exact large token IDs, local logo loading, new-tab destinations, no service requests before clicks, submitted-versus-edited input behavior, invalid-input cleanup, and dark/light/narrow layouts; screenshots were visually inspected.
-- Subsequent media-display adjustment: duplicate media values now share one selector entry, keeping the first field in the existing image-first order. A single distinct value hides the selector. SVG dimensions no longer append "SVG units". TypeScript, all 121 unit tests, production builds, and the media browser suite passed; the browser suite explicitly checks duplicate fields and the SVG caption.
-- Added `npm run release` for local extension, companion, and corresponding source ZIPs, archive checksums, a distribution note, and a bundle report. No package or system dependency was added.
-- Builds now report unpacked sizes and JavaScript dependency contributions in `bundle-report.json`. Gifsicle remains bundled and loaded on demand; `DISTRIBUTION.md` records the unresolved project-license decision.
-- The conversion dialog checks worker canvas, JPEG/WebP encoding, image decoding, and WebAssembly availability before enabling export. Original downloads remain available when conversion is unavailable.
-- `npm run check` passed with **121 unit tests**, strict TypeScript checking, and both production builds.
-- All browser suite components passed using isolated profiles and Chrome for Testing **153.0.8010.12**, selected through `CHROMIUM_EXECUTABLE`. Browser launch required execution outside the filesystem sandbox. Inspector (43 checks), sharing (43), media, cache (15), Alchemy (15), configuration (7), missing-companion recovery, and actual toolbar action suites passed. A media test now waits for the asynchronous fullscreen HTML iframe before asserting its presence.
-- The new offline conversion suite passed JPEG, animated WebP, and GIF output decoding with external requests blocked. The GIF case exercised the actual bundled WASM optimizer and verified the full 20-frame, 1-second timeline. Simulated missing WebP, JPEG, decoder, canvas, WebAssembly, and worker capabilities disabled unavailable exports while preserving exact original bytes, including after changing controls and reopening the dialog.
-- Release ZIPs were checked with Python's independent ZIP reader for CRC integrity, safe entry paths, required Gifsicle source/license files, and SHA-256 checksums. Packaging does not imply publication approval or complete release readiness.
-- Repeated packaging produced byte-identical release files. Extracting the source ZIP and rebuilding with a copy of the installed dependencies produced byte-identical main and companion extensions. This check reused the installed dependency tree; it did not perform a fresh registry installation.
+The review covered networking and host permissions, untrusted metadata, SVG and
+HTML rendering, sandbox messages, conversion workers, local cache/settings,
+external extension messaging, dependencies, and release packaging.
 
-## Completed
+| Severity | Location | Finding and resolution |
+| --- | --- | --- |
+| Medium | `src/network.ts:24` | Automatic redirects could contact unapproved destinations before the final-origin permission check; an A → B → A chain evaded that check. Fetch now uses manual redirect handling and rejects redirects without following them. RPC, metadata, media, thumbnails, and original retrieval use this shared transport. Rejected responses also abort their underlying transfer. |
+| Medium | `src/core.ts:117`, `src/results.ts:204` | Pretty-printing deeply nested metadata could multiply a small response into a very large string before the JSON viewer's DOM cap applied. Metadata now has a 64-level nesting limit; formatting estimates indentation growth before allocation and uses compact JSON when necessary. |
+| Medium hardening | `src/network.ts:77`, `src/results.ts:224` | Automatic media previews had no download bound. Remote previews now stop at 100 MiB or 30 seconds. Explicit Original downloads retain the existing unlimited behavior and remain available after preview failure. |
 
-- `npm ci --offline` installed the locked dependencies from the local npm cache after registry access failed.
-- The earlier `npm run check` passed with 104 unit tests; the follow-up above covers the current 121-test suite.
-- TypeScript now rejects unused locals and parameters and includes `scripts/live-check.ts`.
-- The build was also run from outside the project directory to verify output paths resolve to the project. Both generated manifests match the package version. An isolated mismatched-version check failed before replacing an existing build, as intended.
-- Generated files and `SHA256SUMS.txt` were checked for matching hashes and complete coverage of both build directories.
-- All runtime and development dependencies have current uses in the source, build, or tests. No dependency versions changed; the only lockfile metadata change declares Node.js 22 or later.
-- A separate source security review examined metadata/SVG rendering, URL handling, permissions, external messaging, downloads, cache, and workers. It found **no confirmed exploitable security issue**. This was a source review, not a completed browser penetration test.
+The redirect issue was reproduced in Chromium using a real local HTTP server:
+an allowed hostname redirected to an unapproved hostname and back. The old fetch
+policy reached the intermediate host despite the missing extension grant. With
+the fix, no intermediate or final destination request was received. Tests also
+cover cross-host, same-host, media, and RPC POST redirects. Production host grants
+were not broadened: the test grants localhost only in an isolated copy of the
+manifest and leaves the second loopback hostname unapproved.
 
-The initial review covered the full source tree without a `.git` directory. A Git repository is present during the follow-up; pre-existing branding edits were preserved.
+Rejecting all automatic redirects is intentional. Browser manual Fetch responses
+hide the redirect destination, so the extension cannot safely inspect and approve
+each hop. Providers must expose direct endpoints; source links still open normal
+browser tabs. The relevant behavior is defined by the
+[Fetch Standard](https://fetch.spec.whatwg.org/#concept-filtered-response-opaque-redirect).
 
-## Cleanup performed
+No additional exploitable boundary violation was identified in the source review.
+Metadata is inserted as text, SVG is rendered through image decoding, HTML runs
+in an opaque manifest sandbox, sandbox replies validate their sender and frame
+buffers, and the companion receives only gateway configuration. This is a source
+review with targeted browser regressions, not a guarantee against every browser
+or decoder vulnerability.
 
-- Replaced the README with current installation, usage, cache, conversion, settings, permissions, development, and distribution instructions. Removed contradictory version history, obsolete source/output paths, and stale claims that token history is not stored.
-- Removed the unused metadata-download filename variant, the unused mobile conversion target, unused encoder/SVG state, and an unused review-script import. Kept custom conversion bounds used by encoder failure tests.
-- Updated existing tests to cover supported download behavior and read the running manifest version instead of hardcoding a release number.
-- Removed five unreferenced artwork-specific reports from `verification-data/`. The reusable animation review tool and regression fixtures remain.
-- Removed a machine-specific Brave executable default from the animation review tool; manual extension testing now uses Playwright's Chromium channel consistently.
-- Added `npm run check` and `npm run test:release`, Node.js engine metadata, version checks before build output replacement, automatic checksums, and generated companion/OS files to `.gitignore`.
-- Retained settings/theme migrations and the existing regression suite because they still protect saved preferences and supported behavior.
+## Cleanup
 
-## Checks blocked in this environment
+- Removed the unused `embeddedImageBlob` wrapper, its obsolete image-only
+  assertions, and migrated byte-preservation tests to the actual media loader.
+- Removed 24 stale CSS selectors from retired inspector layouts and three browser
+  assertions about absent legacy elements. Preserved dynamically generated JSON
+  highlighting classes and current regression coverage.
+- Removed the unused 256 px icon and stopped regenerating it. Builds omit the
+  editable SVG master and copy only the companion's required icons, excluding
+  unrelated service logos. The vector master and branding reference stay in source.
+- Removed permanent OpenSea host grants. Actual toolbar-action tests confirm
+  OpenSea and generic token pages still work through `activeTab`.
+- Integrated previously optional large-media regression cases into the standard
+  sharing suite, including a real 101 MiB original, cancellation, and byte checks.
+- Added `test:security` to `test:release`, updated README usage/settings/privacy
+  guidance, and replaced stale verification history with this report.
+- Retained all runtime dependencies, worker entry points, useful fixtures,
+  settings/theme migrations, and documented manual tools because they remain used.
 
-| Check | Result and next step |
+## Automated verification
+
+| Check | Result |
 | --- | --- |
-| Browser regression suites | Resolved in the follow-up: all suite components passed with an installed Chrome for Testing executable outside the sandbox. Playwright's default expected executable remains absent; install it or set `CHROMIUM_EXECUTABLE`. |
-| Dependency freshness and advisories | `npm outdated` and online `npm audit` could not reach `registry.npmjs.org` (`ENOTFOUND`). Rerun both with network access. An offline audit is not treated as a current security result. |
-| Live providers | Not rerun. `npm run test:live` is optional and depends on public Ethereum/IPFS services. |
-| Native browser interaction | Address-bar submission, installation permission prompts, and normal-profile behavior still need manual smoke testing. |
+| Strict TypeScript and deterministic units | Passed; **125 tests**, no failures or skips. |
+| Production build | Passed for both extensions; manifests match package and lockfile versions. Checksums and bundle report regenerated. |
+| Online dependency audit | `npm audit --json` completed against the npm registry: **0 known vulnerabilities**. No dependency versions changed. |
+| Inspector and media browser suites | Passed, including inert JSON/SVG, HTML sandboxing, fullscreen, themes, narrow layout, media selection, and exact downloads. |
+| Sharing browser suite | **46 checks passed**, including bounded automatic preview, explicit 101 MiB original download, GIF/WebP/SVG conversion, cancellation, and output limits. |
+| Cache and Alchemy browser suites | **15 checks each passed**. |
+| Settings and companion suites | **7 configuration checks passed**, plus missing-companion recovery. |
+| Actual toolbar action suite | Passed after removal of permanent OpenSea access, including OpenSea navigation, SuperRare, and generic URLs. |
+| Offline conversion suite | Passed JPEG, WebP, GIF/WASM and unavailable-capability cases, preserving original downloads. |
+| Security browser suite | Passed real redirect/permission checks, RPC POST isolation, metadata depth/format bounds, and preview limits. |
 
-## Remaining review points before publication
+Browser checks used Chrome for Testing **153.0.8010.12**, selected through
+`CHROMIUM_EXECUTABLE`, in temporary profiles. Browser execution required running
+outside the filesystem sandbox. No personal browser profiles were used. The
+security and large-original tests use loopback servers; ordinary provider
+responses are mocked. Unit tests additionally cover streamed bodies without
+Content-Length, preview timeout/cancellation, nested embedded JSON, and forced
+redirect policy even when a caller supplies `redirect: 'follow'`.
 
-1. **Redirect host consent:** `src/network.ts` uses the browser's default redirect following and checks the final response origin before reading its body. Source review cannot establish whether an ungranted intermediate host can receive a request before that check. Add a real-browser test for allowed A → ungranted B → allowed A and confirm the intended host-consent boundary. This is an unresolved concern, not a confirmed exploit; disabling redirects would also affect gateway loading.
-2. **Distribution terms:** there is no top-level project license. Choose the project's terms before publishing it as open source. Retain third-party notices and the supplied Gifsicle source/license/integration files when preparing the distribution.
-3. **Resource behavior:** original media previews/downloads intentionally have no application size cap or fixed timeout. Browser memory remains a practical limit. Conversion and metadata requests keep their separate bounds; this cleanup did not change that behavior.
+## Remaining release work
 
-## Manual release smoke test
+- **Publication terms:** the project still has no top-level project license.
+  The owner must select compatible distribution terms before publication; see
+  [DISTRIBUTION.md](DISTRIBUTION.md). Gifsicle source, license, integration notes,
+  and generated third-party notices remain included.
+- **Live providers:** public Ethereum/IPFS checks were not rerun. Run
+  `npm run test:live` with network access and verify chosen endpoints return
+  content directly without HTTP redirects.
+- **Manual browser smoke test:** install both extensions in a fresh profile;
+  exercise `eth` and `ipfs` address-bar submission, native host-permission
+  acceptance/denial, companion pairing, and an ordinary toolbar action.
+- **Resource limitations:** explicit original downloads still have no size or
+  total-time cap. Browser image decoding and HTML artwork execution can consume
+  substantial resources even within download limits. Conversion retains its
+  independent byte/pixel/frame/time budgets.
 
-1. Load `extension/` and optionally `ipfs-extension/` in a fresh profile. Confirm the displayed version, settings defaults, theme, and companion pairing.
-2. Submit an address, address plus token ID, and CID through `eth` + Tab; test `ipfs` + Tab with the companion.
-3. Click the toolbar on an Ethereum OpenSea/SuperRare token, a generic token URL, a non-token page, and a recognized unsupported-chain page.
-4. Inspect a token with embedded SVG and one with external media. Exercise host permission acceptance/denial, original download, conversion, cancellation, and fullscreen.
-5. Reopen a cached token offline, force Refresh, clear Recents, and check another open inspector tab updates.
-6. If Alchemy is configured, check collection/wallet pagination, thumbnail permission, token handoff, and ownership/mint refresh.
-
-Full release readiness remains pending online dependency checks, redirect-consent verification, manual normal-profile smoke testing, and publication decisions above.
+Automated checks passing does not select publication terms or substitute for the
+live-provider and native-browser smoke tests above.

@@ -7,6 +7,7 @@
     "build": "node scripts/build.mjs",
     "release": "node scripts/release.mjs",
     "test:offline": "node scripts/offline-conversion-browser-test.mjs",
+    "test:security": "node scripts/security-browser-test.mjs",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test tests/*.test.ts",
     "test:browser": "node scripts/browser-test.mjs && node scripts/media-browser-test.mjs && node scripts/share-browser-test.mjs && node scripts/cache-browser-test.mjs && node scripts/alchemy-browser-test.mjs",
@@ -17,7 +18,7 @@
     "test:cache": "node scripts/cache-browser-test.mjs",
     "test:alchemy": "node scripts/alchemy-browser-test.mjs",
     "check": "npm run typecheck && npm test && npm run build",
-    "test:release": "npm run check && npm run test:browser && npm run test:config && npm run test:opensea && npm run test:offline"
+    "test:release": "npm run check && npm run test:browser && npm run test:config && npm run test:opensea && npm run test:offline && npm run test:security"
   },
   "dependencies": {
     "gifenc": "^1.0.3",

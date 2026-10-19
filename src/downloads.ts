@@ -5,11 +5,6 @@ export function downloadName(contract: string, id: bigint, kind: 'media' | 'web'
   return `${address(contract).toLowerCase()}--${id}--${kind}.${extension}`;
 }
 
-export function embeddedImageBlob(uri: string): Blob {
-  if (!imageDataUri(uri)) throw new Failure('image', 'This embedded image format is not supported.');
-  return embeddedMediaBlob(uri);
-}
-
 export function embeddedMediaBlob(uri: string): Blob {
   if (!imageDataUri(uri) && !htmlDataUri(uri)) throw new Failure('image', 'This embedded media format is not supported.');
   const comma = uri.indexOf(',');

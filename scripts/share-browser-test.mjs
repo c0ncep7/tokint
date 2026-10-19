@@ -104,7 +104,6 @@ try {
     const body = fixtures[filename] ?? fixtures['wide.jpg'];
     const headers = {};
     if (filename === 'large-download.jpg' || filename === 'slow.jpg') headers['content-length'] = String(21 * 1024 * 1024);
-    if (filename === 'huge-download.jpg') headers['content-length'] = String(101 * 1024 * 1024);
     try { await route.fulfill({ contentType: filename.endsWith('.svg') ? 'image/svg+xml' : filename.endsWith('.gif') ? 'image/gif' : filename.endsWith('.webp') ? 'image/webp' : filename.endsWith('.png') ? 'image/png' : 'image/jpeg', body, headers }); } catch { /* cancellation */ }
   });
   await page.goto(`chrome-extension://${extensionId}/results.html`);
@@ -140,11 +139,16 @@ try {
     }
     decoder.close(); return { count, duration, width, height, samples, size: blob.size, type: blob.type };
   });
-  if (process.env.MEDIA_LOADING_ONLY) {
+  {
     for (const id of [6, 9]) {
-      await submit(id); assert.equal(await page.locator('#status').textContent(), '');
+      await submit(id);
+      if (id === 9) {
+        assert.match(await page.locator('#status').textContent(), /exceeds/);
+        assert.equal(await page.locator('#image').isVisible(), false);
+      } else assert.equal(await page.locator('#status').textContent(), '');
       await open();
-      const downloadEvent = page.waitForEvent('download'); await page.locator('#download-media').click();
+      const downloadEvent = page.waitForEvent('download');
+      await page.locator(id === 9 ? '#fetch-original-media' : '#download-media').click();
       const file = await downloadEvent; const bytes = await readFile(await file.path());
       assert.equal(file.suggestedFilename(), `${contract}--${id}--media.jpg`);
       assert.equal(bytes.length, fixtures['wide.jpg'].length + (id === 9 ? 101 * 1024 * 1024 : 0));
@@ -156,7 +160,7 @@ try {
       }
       await page.locator('#close-share-modal').click();
     }
-    check('large declared and actual 101 MiB originals preview and download exactly; conversion remains separate');
+    check('automatic preview rejects 101 MiB, explicit originals download exactly, and conversion remains bounded');
     slowAttempts = 0; await submit(8); await open();
     const originalEvent = page.waitForEvent('download'); await page.locator('#fetch-original-media').click();
     const originalFile = await originalEvent;
@@ -169,7 +173,6 @@ try {
     await page.waitForTimeout(800); await open();
     assert.equal(await page.locator('#download-media').getAttribute('download'), `${contract}--1--media.jpg`);
     assert.deepEqual(errors, []); check('switching tokens cancels original retrieval without publishing stale downloads');
-    console.log(`${count} media loading checks passed.`); return;
   }
   await submit(1);
   const before = mediaRequests;

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { CID } from 'multiformats/cid';
-import { address, DEFAULTS, explorer, imageDataUri, ipfsUrl, LatestRequest, MAX_UINT256, parseIpfs, parseMetadata, parseQuery, readDataJson, resolveUri, settings, substituteId, tokenId } from '../src/core';
+import { address, DEFAULTS, explorer, formatMetadata, imageDataUri, ipfsUrl, LatestRequest, MAX_METADATA, MAX_UINT256, parseIpfs, parseMetadata, parseQuery, readDataJson, resolveUri, settings, substituteId, tokenId } from '../src/core';
 
 const DWEB = { ...DEFAULTS, gatewayUrl: 'https://dweb.link', gatewayStyle: 'subdomain' as const };
 const contract = '0x0000000000000000000000000000000000000001';
@@ -64,6 +64,21 @@ test('metadata must be a bounded JSON object', () => {
   for (const raw of ['<html>error</html>', 'null', '[]', 'true']) assert.throws(() => parseMetadata(raw));
   assert.throws(() => parseMetadata(JSON.stringify({ text: 'a'.repeat(2 * 1024 * 1024) })));
   assert.deepEqual(parseMetadata('{}'), {});
+});
+test('metadata nesting is bounded before rendering or caching', () => {
+  const nested = (depth: number) => '{"items":' + '['.repeat(depth) + '0' + ']'.repeat(depth) + '}';
+  assert.doesNotThrow(() => parseMetadata(nested(63)));
+  for (const depth of [64, 300, 10_000]) assert.throws(() => parseMetadata(nested(depth)), /nesting limit/);
+  assert.throws(() => readDataJson('data:application/json,' + encodeURIComponent(nested(300))), /nesting limit/);
+});
+test('large nested metadata uses compact JSON without amplifying display memory', () => {
+  const text = '{"items":' + '['.repeat(60) + Array(100_000).fill('0').join(',') + ']'.repeat(60) + '}';
+  const data = parseMetadata(text);
+  const formatted = formatMetadata(data);
+  assert.equal(formatted, text);
+  assert.ok(formatted.length < MAX_METADATA);
+  assert.deepEqual(JSON.parse(formatted), data);
+  assert.equal(formatMetadata({ name: 'Artwork', attributes: [{ value: 1 }] }), JSON.stringify({ name: 'Artwork', attributes: [{ value: 1 }] }, null, 2));
 });
 test('settings validate endpoints and gateway mode', () => {
   assert.equal(settings(DWEB).gatewayStyle, 'subdomain');
