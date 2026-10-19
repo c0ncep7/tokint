@@ -4,6 +4,34 @@ import { Failure } from '../src/core';
 import { loadImage, loadMedia, loadMetadata, loadPreview, PREVIEW_BYTES, requestBytes, type NetworkOptions } from '../src/network';
 const permitted = async () => true;
 const mock = (response: Response): NetworkOptions => ({ permitted, fetcher: async () => response });
+test('Arweave metadata and original media request the direct sandbox with destination permission checks', async () => {
+  const id = 'SlaIzGKzkNyMyK-wNfXRjjNUWSFXDD7kIrrR98rxoU4';
+  const host = 'jjlirtdcwoinzdgiv6ydl5orryzviwjbk4gd5zbcxli7psxrufha.arweave.net';
+  const url = `https://arweave.net/${id}`;
+  const direct = `https://${host}/${id}`;
+  const grants: string[] = [];
+  const opts: NetworkOptions = {
+    permitted: async origin => { grants.push(origin); return true; },
+    fetcher: async (input, init) => {
+      assert.equal(input, direct);
+      assert.equal(init?.redirect, 'manual');
+      return Response.json({ name: 'Freedom to Retract' });
+    },
+  };
+  assert.deepEqual(await loadMetadata(url, opts), { data: { name: 'Freedom to Retract' }, url: direct });
+  const media = await loadMedia(url, { ...opts, fetcher: async input => {
+    assert.equal(input, direct); return new Response('artwork bytes', { headers: { 'Content-Type': 'image/png' } });
+  } });
+  assert.equal(await media.text(), 'artwork bytes');
+  assert.deepEqual(grants, [`https://${host}/*`, `https://${host}/*`]);
+  await assert.rejects(loadMetadata(url, {
+    permitted: async origin => { assert.equal(origin, `https://${host}/*`); return false; },
+    fetcher: async () => { throw new Error('Must not fetch without destination permission'); },
+  }), (e: unknown) => e instanceof Failure && e.kind === 'permission' && e.origin === `https://${host}/*`);
+  await requestBytes(url, 'rpc', 1000, { permitted, fetcher: async input => {
+    assert.equal(input, url); return Response.json({ result: '0x1' });
+  } }, { method: 'POST', body: '{}' });
+});
 test('missing permission stops network access and identifies the host grant', async () => {
   let calls = 0;
   await assert.rejects(loadMetadata('https://metadata.example/item', { permitted: async () => false, fetcher: async () => { calls++; return new Response('{}'); } }), (e: unknown) => e instanceof Failure && e.kind === 'permission' && e.origin === 'https://metadata.example/*');

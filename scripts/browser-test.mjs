@@ -21,6 +21,9 @@ const cid = CID.parse('QmYwAPJzv5CZsnAzt8auVTLnEKjHhhtvE4s1wKpR1X4M8F').toV1().t
 const gateway = `https://gateway.pinata.cloud/ipfs/${cid}`;
 const contract = '0x0000000000000000000000000000000000000001';
 const erc1155 = '0x0000000000000000000000000000000000000002';
+const reportedContract = '0x33fd426905f149f8376e227d0c9d3340aad17af1';
+const arweaveId = 'SlaIzGKzkNyMyK-wNfXRjjNUWSFXDD7kIrrR98rxoU4';
+const arweaveDirect = `https://jjlirtdcwoinzdgiv6ydl5orryzviwjbk4gd5zbcxli7psxrufha.arweave.net/${arweaveId}`;
 const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800" viewBox="0 0 800 800"><rect width="800" height="800" fill="#102f2a"/><circle cx="400" cy="400" r="250" fill="#204d3e"/><g fill="none" stroke="#a0d3a2" stroke-width="2"><path d="M400 120 640 400 400 680 160 400Z"/><path d="M400 180 580 400 400 620 220 400Z"/><path d="M400 240 520 400 400 560 280 400Z"/><path d="M400 120V680M160 400H640"/></g><circle cx="400" cy="400" r="22" fill="#d6e9bd"/></svg>';
 let rpcCount = 0;
 let mediaRequests = 0;
@@ -39,7 +42,8 @@ try {
     else {
       const { to, data } = request.params[0];
       const id = BigInt('0x' + data.slice(-64));
-      if (data.startsWith('0x01ffc9a7')) result = abiBool(to === erc1155 ? data.includes('0e89341c') : data.includes('5b5e139f'));
+      if (data.startsWith('0x01ffc9a7')) result = abiBool(to === erc1155 || to.toLowerCase() === reportedContract ? data.includes('0e89341c') : data.includes('5b5e139f'));
+      else if (id === 410n && to.toLowerCase() === reportedContract) result = abiString(`https://arweave.net/${arweaveId}`);
       else if (id === 5n) { await route.fulfill({ json: { jsonrpc: '2.0', id: request.id, error: { code: 3, message: 'execution reverted' } } }); return; }
       else if (id === 6n) result = abiString('data:application/json,' + encodeURIComponent(JSON.stringify({ name: 'Embedded token', image: 'data:image/svg+xml,' + encodeURIComponent(svg) })));
       else if (id === 15n) result = abiString('https://gateway.pinata.cloud/large/15.json');
@@ -88,6 +92,18 @@ try {
   await context.route('https://arweave.net/metadata-fixture', route => route.fulfill({ json: { name: 'Arweave fixture', image: 'https://media-fixture.arweave.net/media-fixture' } }));
   await context.route('https://metadata-fixture.arweave.net/metadata-fixture', route => route.fulfill({ json: { name: 'Arweave fixture', image: 'https://media-fixture.arweave.net/media-fixture' } }));
   await context.route('https://media-fixture.arweave.net/media-fixture', route => route.fulfill({ contentType: 'image/svg+xml', body: svg }));
+  let arweaveRedirects = 0;
+  const directRequests = [];
+  await context.route(`https://arweave.net/${arweaveId}**`, route => {
+    arweaveRedirects++;
+    return route.fulfill({ status: 302, headers: { Location: route.request().url().replace(`https://arweave.net/${arweaveId}`, arweaveDirect) } });
+  });
+  await context.route(`${arweaveDirect}**`, route => {
+    directRequests.push(route.request().url());
+    return route.request().url().endsWith('/art.svg')
+      ? route.fulfill({ contentType: 'image/svg+xml', body: svg })
+      : route.fulfill({ json: { name: 'Freedom to Retract', image: `https://arweave.net/${arweaveId}/art.svg` } });
+  });
   const permissions = await worker.evaluate(async () => Promise.all([
     'https://arweave.net/*', 'https://metadata-fixture.arweave.net/*', 'https://media-fixture.arweave.net/*',
     'https://arweave.net.example.com/*', 'https://not-arweave.net/*',
@@ -142,6 +158,16 @@ try {
   assert.equal(await page.locator('#name').textContent(), 'Arweave fixture');
   for (const id of ['metadata-storage', 'media-storage']) assert.equal(await page.locator(`#${id}`).getAttribute('data-location'), 'decentralized');
   check('Arweave metadata and media load from the root and separate subdomains without permission prompts');
+  await submit(410, reportedContract);
+  await page.waitForFunction(() => !document.querySelector('#image').hidden || document.querySelector('#status-row').dataset.state === 'error');
+  assert.equal(await page.locator('#status').textContent(), '');
+  assert.equal(await page.locator('#name').textContent(), 'Freedom to Retract');
+  assert.equal(await page.locator('#raw-uri').inputValue(), `https://arweave.net/${arweaveId}`);
+  assert.equal(await page.locator('#resolved-uri').inputValue(), arweaveDirect);
+  assert.equal(await page.locator('#image').evaluate(img => img.naturalWidth), 800);
+  assert.equal(arweaveRedirects, 0);
+  assert.deepEqual(directRequests, [arweaveDirect, `${arweaveDirect}/art.svg`]);
+  check('reported token 410 resolves Arweave metadata and artwork directly without redirecting or widening permissions');
   await submit(1);
   await page.waitForFunction(() => !document.querySelector('#image').hidden);
   assert.equal(await page.locator('#name').textContent(), 'Verdant Geometry #1');

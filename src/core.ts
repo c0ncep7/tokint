@@ -1,5 +1,7 @@
 import { getAddress } from 'viem';
 import { CID } from 'multiformats/cid';
+import { base32 } from 'multiformats/bases/base32';
+import { base64url } from 'multiformats/bases/base64';
 
 export type FailureKind = 'input' | 'permission' | 'rpc' | 'contract' | 'metadata' | 'gateway' | 'json' | 'image';
 export class Failure extends Error {
@@ -47,6 +49,24 @@ export function settings(value: Settings): Settings {
 export function permissionPattern(url: string): string {
   const u = httpUrl(url);
   return `${u.protocol}//${u.hostname}/*`;
+}
+/** Resolve Arweave's deterministic transaction sandbox before fetching content.
+ * https://docs.ar.io/build/advanced/sandboxing/
+ * Only the public gateway's transaction route is rewritten; RPC/API routes,
+ * custom gateways and already-isolated subdomains retain their original URL.
+ */
+export function contentUrl(value: string): string {
+  const url = httpUrl(value);
+  const id = url.pathname.match(/^\/([A-Za-z0-9_-]{43})(?:\/|$)/)?.[1];
+  if (url.protocol === 'https:' && url.hostname === 'arweave.net' && !url.port && id) {
+    try {
+      const bytes = base64url.decode(`u${id}`);
+      if (bytes.length === 32 && base64url.encode(bytes).slice(1) === id) {
+        url.hostname = `${base32.encode(bytes).slice(1)}.arweave.net`;
+      }
+    } catch { /* Malformed transaction IDs are left for the gateway to reject. */ }
+  }
+  return url.href;
 }
 export type IpfsRef = { cid: string; suffix: string };
 export function parseIpfs(value: string): IpfsRef | null {

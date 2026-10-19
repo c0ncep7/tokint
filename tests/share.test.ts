@@ -61,7 +61,7 @@ test('malformed and oversized image headers produce actionable errors', async ()
   assert.throws(() => rasterHeader(oversized), /malformed/);
 });
 test('web postfix retains the complete address and large token ID', () => {
-  assert.equal(downloadName('0x00000000000000000000000000000000000000ab', 900719925474099312345n, 'web', 'gif'), '0x00000000000000000000000000000000000000ab--900719925474099312345--web.gif');
+  assert.equal(downloadName('0x00000000000000000000000000000000000000ab', 900719925474099312345n, 'web', 'gif', 'Freedom to Retract'), '0x00000000000000000000000000000000000000ab--900719925474099312345--freedom-to-retract--web.gif');
 });
 test('original media is unlimited while callers can bound conversion inputs', async () => {
   const response = () => new Response('GIF89a', { headers: { 'Content-Type': 'image/gif', 'Content-Length': String(21 * 1024 * 1024) } });

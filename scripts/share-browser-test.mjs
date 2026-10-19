@@ -194,7 +194,7 @@ try {
   const downloadEvent = page.waitForEvent('download');
   await page.evaluate(() => { document.querySelector('#token').value = '999999999999999999'; });
   await page.locator('#share-download').click(); const download = await downloadEvent;
-  assert.equal(download.suggestedFilename(), `${contract}--1--web.jpg`);
+  assert.equal(download.suggestedFilename(), `${contract}--1--sharing-fixture-1--web.jpg`);
   assert.equal((await readFile(await download.path())).length, info.size);
   check('JPEG fits 2000px / 5MB, preserves 2:1 ratio, reuses source, downloads web postfix with loaded identity');
   await page.locator('#share-edge').selectOption('custom'); await page.locator('#share-custom-edge').fill('333');
@@ -227,7 +227,7 @@ try {
   assert.equal(info.type, 'image/gif'); assert.equal(info.count, 20); assert.equal(info.duration, 1000); assert.equal(info.width, 160);
   assert.notDeepEqual(info.samples[0], info.samples[1]);
   const gifDownloadEvent = page.waitForEvent('download'); await page.locator('#share-download').click(); const gifDownload = await gifDownloadEvent;
-  assert.equal(gifDownload.suggestedFilename(), `${contract}--3--web.gif`);
+  assert.equal(gifDownload.suggestedFilename(), `${contract}--3--sharing-fixture-3--web.gif`);
   assert.equal((await readFile(await gifDownload.path())).subarray(0, 6).toString(), 'GIF89a');
   check('animated WebP converts to a real animated GIF download with matching duration');
   await page.locator('#share-format').selectOption('webp');
@@ -238,7 +238,7 @@ try {
   assert.notDeepEqual(info.samples[0], info.samples[1]);
   assert.ok(info.samples.at(-1).slice(0, 3).every(n => n > 240));
   const webpDownloadEvent = page.waitForEvent('download'); await page.locator('#share-download').click(); const webpDownload = await webpDownloadEvent;
-  assert.equal(webpDownload.suggestedFilename(), `${contract}--3--web.webp`);
+  assert.equal(webpDownload.suggestedFilename(), `${contract}--3--sharing-fixture-3--web.webp`);
   const webpBytes = await readFile(await webpDownload.path());
   assert.equal(webpBytes.subarray(0, 4).toString(), 'RIFF'); assert.equal(webpBytes.subarray(8, 12).toString(), 'WEBP');
   check('WebP animation download decodes all frames, retains timing, respects size, avoids upscaling and does not invent higher-rate frames');
@@ -283,7 +283,7 @@ try {
   await page.locator('#share-fps').selectOption('20'); await generate(); info = await inspectOutput();
   assert.equal(info.type, 'image/gif'); assert.equal(info.count, 20); assert.equal(info.duration, 1000);
   assert.notDeepEqual(info.samples[0], info.samples[10]);
-  assert.equal(await page.locator('#share-download').getAttribute('download'), `${contract}--14--web.gif`);
+  assert.equal(await page.locator('#share-download').getAttribute('download'), `${contract}--14--sharing-fixture-14--web.gif`);
   check('SMIL SVG is detected before generation and exports changing GIF frames with the selected duration');
   for (const format of ['gif', 'webp']) {
     for (const rate of [25, 30, 50]) {
@@ -292,7 +292,7 @@ try {
       assert.equal(info.type, `image/${format}`); assert.equal(info.count, rate); assert.equal(info.duration, 1000);
       assert.equal(info.width, 100); assert.equal(info.height, 100); assert.ok(info.size < 15_000_000);
       assert.notDeepEqual(info.samples[0], info.samples[Math.floor(rate / 2)]);
-      assert.equal(await page.locator('#share-download').getAttribute('download'), `${contract}--14--web.${format}`);
+      assert.equal(await page.locator('#share-download').getAttribute('download'), `${contract}--14--sharing-fixture-14--web.${format}`);
       check(`SMIL SVG exports ${rate} fps ${format} with changing frames, exact duration and upscaled dimensions`);
     }
   }
@@ -306,7 +306,7 @@ try {
   assert.equal(info.width, 2000); assert.equal(info.height, 2000);
   assert.equal(await page.locator('#share-animation-controls').isVisible(), false);
   assert.equal(await page.locator('#share-svg-duration-label').isVisible(), false);
-  assert.equal(await page.locator('#share-download').getAttribute('download'), `${contract}--15--web.jpg`);
+  assert.equal(await page.locator('#share-download').getAttribute('download'), `${contract}--15--sharing-fixture-15--web.jpg`);
   check('static SVG exports JPEG upscaled to 2000 px without animation or clip-length controls');
   await page.locator('#close-share-modal').click();
   await submit(16); await open(); await page.locator('#share-svg-duration').waitFor({ state: 'visible' });
@@ -432,7 +432,7 @@ try {
   await page.waitForFunction(() => !document.querySelector('#share-modal').open);
   await page.waitForFunction(() => !document.querySelector('#image').hidden);
   await page.waitForTimeout(800); assert.equal(await page.locator('#share-download').isVisible(), false);
-  await open(); await generate(); assert.equal(await page.locator('#share-download').getAttribute('download'), `${contract}--1--web.jpg`);
+  await open(); await generate(); assert.equal(await page.locator('#share-download').getAttribute('download'), `${contract}--1--sharing-fixture-1--web.jpg`);
   check('new token lookup cancels conversion, clears old media, and keeps the correct output identity');
   await page.locator('#close-share-modal').click();
   await submit(27); await open(); await page.locator('#share-fps').selectOption('0'); await page.locator('#share-edge').selectOption('2000');

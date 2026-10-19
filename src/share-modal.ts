@@ -7,7 +7,7 @@ import { Failure } from './core';
 import { loadMedia } from './network';
 import { SHARE_SOURCE_LIMIT, SHARE_TIMEOUT, animationFrameTime, assertExportDimensions, sizeLabel, targetBytes, validateOptions, type ShareMessage, type ShareOptions } from './share-core';
 
-type Source = { url: string; contract: string; id: bigint; blob?: Blob; width?: number; height?: number; frames?: number; decoderType?: string; inspectionError?: string; svg?: SvgPlan; html?: boolean };
+type Source = { url: string; contract: string; id: bigint; title: string; blob?: Blob; width?: number; height?: number; frames?: number; decoderType?: string; inspectionError?: string; svg?: SvgPlan; html?: boolean };
 export function createShareModal() {
   const el = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
   const open = el<HTMLButtonElement>('share-media');
@@ -304,7 +304,7 @@ export function createShareModal() {
         outputUrl = URL.createObjectURL(result.blob);
         preview.src = outputUrl; preview.hidden = false;
         el('share-preview-stage').hidden = false;
-        download.href = outputUrl; download.download = downloadName(current.contract, current.id, 'web', result.extension); download.hidden = false;
+        download.href = outputUrl; download.download = downloadName(current.contract, current.id, 'web', result.extension, current.title); download.hidden = false;
         el('share-output').textContent = `${result.width} × ${result.height} · ${sizeLabel(result.blob.size)} · ${result.extension.toUpperCase()}${result.frames > 1 ? ` · ${result.frames} frames · ${(result.duration / 1000).toFixed(2)} s` : ''}`;
         
         message('');
@@ -380,7 +380,7 @@ export function createShareModal() {
     })().catch(fail);
   });
   return {
-    setSource(url: string, identity: { contract: string; id: bigint }) {
+    setSource(url: string, identity: { contract: string; id: bigint; title: string }) {
       source = { url, ...identity }; permissionOrigin = undefined; open.hidden = false; updateControls();
     },
     setBlob(url: string, blob: Blob, width?: number, height?: number) {

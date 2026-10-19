@@ -339,7 +339,7 @@ async function run(fresh = false) {
         const mediaUrl = mediaReference(selected.uri);
         if (mediaUrl.startsWith('data:') && !imageDataUri(mediaUrl) && !htmlDataUri(mediaUrl)) throw new Failure('image', 'This embedded media format is not supported.');
         if (!mediaUrl.startsWith('data:')) link('image-link', httpUrl(mediaUrl).href);
-        shareModal.setSource(mediaUrl, { contract, id });
+        shareModal.setSource(mediaUrl, { contract, id, title: typeof metadata.data.name === 'string' ? metadata.data.name : '' });
         await preview(mediaUrl, mediaTicket, cached?.image?.url === mediaUrl ? cached.image.blob : undefined, { key, snapshot, epoch: stored.epoch });
       } catch (e) { failure(e, () => selectMedia!(), mediaTicket, true); }
     };

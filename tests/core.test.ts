@@ -1,12 +1,31 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { CID } from 'multiformats/cid';
-import { address, DEFAULTS, explorer, formatMetadata, httpUrl, imageDataUri, ipfsUrl, LatestRequest, MAX_METADATA, MAX_UINT256, parseIpfs, parseMetadata, parseQuery, readDataJson, resolveUri, settings, substituteId, tokenId } from '../src/core';
+import { address, contentUrl, DEFAULTS, explorer, formatMetadata, httpUrl, imageDataUri, ipfsUrl, LatestRequest, MAX_METADATA, MAX_UINT256, parseIpfs, parseMetadata, parseQuery, readDataJson, resolveUri, settings, substituteId, tokenId } from '../src/core';
 
 const DWEB = { ...DEFAULTS, gatewayUrl: 'https://dweb.link', gatewayStyle: 'subdomain' as const };
 const contract = '0x0000000000000000000000000000000000000001';
 const cid0 = 'QmYwAPJzv5CZsnAzt8auVTLnEKjHhhtvE4s1wKpR1X4M8F';
 const cid = CID.parse(cid0).toV1().toString();
+test('Arweave transaction URLs use their deterministic sandbox and preserve resource suffixes', () => {
+  const id = 'SlaIzGKzkNyMyK-wNfXRjjNUWSFXDD7kIrrR98rxoU4';
+  const host = 'jjlirtdcwoinzdgiv6ydl5orryzviwjbk4gd5zbcxli7psxrufha.arweave.net';
+  for (const suffix of ['', '/nested/art%20work.png?download=1#frame']) {
+    assert.equal(contentUrl(`https://arweave.net/${id}${suffix}`), `https://${host}/${id}${suffix}`);
+    assert.equal(contentUrl(`https://${host}/${id}${suffix}`), `https://${host}/${id}${suffix}`);
+  }
+  // Independent published AR.IO example, not just this token's regression vector.
+  const example = 'gnWKBqFXMJrrksEWrXLQRUQQQeFhv4uVxesHBcT8i6o';
+  assert.equal(contentUrl(`https://arweave.net/${example}`), `https://qj2yubvbk4yjv24syelk24wqivcbaqpbmg7yxfof5mdqlrh4rova.arweave.net/${example}`);
+  for (const url of [
+    `https://arweave.net.example/${id}`, `https://custom.example/${id}`,
+    `https://arweave.net:8443/${id}`, `https://arweave.net/tx/${id}/status`,
+    'https://arweave.net/info', `https://arweave.net/${id}extra`,
+    `https://arweave.net/${id.slice(0, -1)}5`, // Non-canonical base64 padding bits.
+  ]) assert.equal(contentUrl(url), url);
+  assert.throws(() => contentUrl(`http://arweave.net/${id}`), /HTTPS/);
+  assert.throws(() => contentUrl(`https://user:pass@arweave.net/${id}`), /HTTPS/);
+});
 test('address commands route to Read Contract', () => {
   assert.deepEqual(parseQuery(`  ${contract} `), { kind: 'contract', contract });
   assert.equal(explorer(contract), `https://etherscan.io/address/${contract}#readContract`);

@@ -61,7 +61,10 @@ URI, resolves IPFS references through your chosen gateway, and reads the returne
 JSON and referenced artwork. Embedded data is decoded locally. A usable cached
 snapshot can supply metadata and media instead; **Refresh** requests current data.
 The RPC provider supplies contract reads, the gateway or content host supplies
-files, and your browser performs display and conversion.
+files, and your browser performs display and conversion. For `https://arweave.net/<transaction-ID>`
+content, TOKINT calculates the transaction-specific subdomain and requests it directly,
+including for artwork and original downloads. This supports Arweave's standard
+[sandbox routing](https://docs.ar.io/build/advanced/sandboxing/) without an HTTP redirect.
 
 The inspector shows the original metadata URI, resolved URL, JSON, attributes, and image preview. JSON is normally indented; large or deeply nested objects use compact formatting to keep display memory bounded. Metadata deeper than 64 object/array levels is rejected. Use the copy and external-link controls to inspect sources. The contract link opens Etherscan's Read Contract page. When metadata provides multiple distinct assets, the Media source dropdown in the preview footer switches between `image`, `animation_url`, `image_url`, inline SVG `image_data`, other media aliases, and `properties.files` entries. Duplicate media values share one entry; the selector is hidden when only one distinct value remains. The selected asset drives the preview, storage badge, source link, original download, and conversion tools. Animated image formats work from any of these fields. Base64 HTML animations also preview in an isolated sandbox. Audio and video remain outbound links. The OpenSea and OnChainChecker logos beneath the media open the submitted token on each service in a new tab. Both logos are bundled locally; the services are contacted only when you follow a link.
 
@@ -120,7 +123,7 @@ remain available. Updating the browser may enable additional conversion formats.
 - Choose black or white to flatten transparency. Animation controls offer Original timing for raster sources or a **10–50 fps** cap; SVG defaults to **20 fps** and supports **0.1–60-second** clips.
 - Outputs must fit **5 MB for JPEG** or **15 MB for animation**. Compression can change appearance and may reduce dimensions to fit. These limits do not guarantee acceptance by a particular social platform.
 - Changing options, closing the dialog, cancelling, or loading another token stops pending conversion and clears stale exports.
-- Filenames use the loaded token's full lowercase address and exact ID: `0x<contract>--123--media.png` for originals or `0x<contract>--123--web.gif` for conversions.
+- Converted filenames use `contract--id--title--web.extension`, with the loaded token's full lowercase address, exact ID, and a lowercase, hyphenated metadata title. For example: `0x33fd426905f149f8376e227d0c9d3340aad17af1--410--freedom-to-retract--web.jpg`. Spaces and punctuation become hyphens, long titles are shortened, and missing/unusable titles become `untitled`. Original downloads use `0x<contract>--123--media.png`.
 
 Automatic remote previews have a **100 MiB download limit** and a **30-second timeout**. If a preview is too large or slow, use **Download/Convert → Original** to retrieve it explicitly, or open its source URL. Explicit original downloads have no application file-size cap or fixed total timeout; browser memory and decoding limits still apply. Conversion has a separate **100 MiB input limit**. Raster conversion allows up to 32 million pixels per frame, 1000 frames, 160 million total source pixels, and 10 minutes of source animation, with a two-minute generation timeout.
 
@@ -143,7 +146,7 @@ Open Settings with the inspector's gear icon. Click **Save settings** to apply c
 
 **Restore defaults** fills the form; click **Save settings** to apply it. Theme is changed separately with the sun/moon button. Clearing Recents removes history and cached files without changing settings.
 
-RPC and content requests require direct URLs: automatic HTTP redirects are blocked before contacting their destinations. If a provider or path-style gateway redirects, use its direct endpoint, choose another gateway/style, or follow the source link in a normal browser tab. The extension does not silently switch providers.
+RPC and content requests use direct URLs. Arweave transaction URLs are resolved to their deterministic sandbox subdomains before content is fetched. Other automatic HTTP redirects are blocked before contacting their destinations. If a provider or path-style gateway redirects, use its direct endpoint, choose another gateway/style, or follow the source link in a normal browser tab. The extension does not silently switch providers.
 
 ## Optional Alchemy features
 
@@ -230,7 +233,7 @@ Read the [privacy policy](public/privacy.html) for local storage, retention, thi
 
 Settings, the last contract, theme, and recent tokens stay in local browser storage. Providers receive the RPC/content requests you submit. There are no analytics, wallet connections, signing requests, content scripts, or background polling. Toolbar detection uses temporary `activeTab` access and reads the clicked tab's URL without fetching or injecting into its page.
 
-TOKINT requests storage, `activeTab`, and host access for PublicNode, Pinata, and Arweave. OpenSea toolbar detection needs no permanent OpenSea host permission. Other HTTPS hosts and the literal HTTP loopback hosts `localhost` and `127.0.0.1` are optional. Remote plain-HTTP RPC, metadata, media, and gateway requests are rejected; use a direct HTTPS endpoint. **Allow and retry** requests access after a user click; declining leaves source links available. Revoke optional access through the browser's extension management page. Requests omit cookies and referrers. Automatic redirects, including same-host redirects, are blocked before following them; outbound links use the browser's normal navigation behavior. See [verification notes](VERIFICATION.md) for the tested security boundaries.
+TOKINT requests storage, `activeTab`, and host access for PublicNode, Pinata, and Arweave. OpenSea toolbar detection needs no permanent OpenSea host permission. Other HTTPS hosts and the literal HTTP loopback hosts `localhost` and `127.0.0.1` are optional. Remote plain-HTTP RPC, metadata, media, and gateway requests are rejected; use a direct HTTPS endpoint. **Allow and retry** requests access after a user click; declining leaves source links available. Revoke optional access through the browser's extension management page. Requests omit cookies and referrers. Arweave transaction content is requested directly from its calculated sandbox subdomain, with host access checked for that destination. HTTP redirects, including same-host redirects, are blocked before following them; outbound links use the browser's normal navigation behavior. See [verification notes](VERIFICATION.md) for the tested security boundaries.
 
 | Error | Suggested action |
 | --- | --- |
@@ -245,7 +248,7 @@ RPC requests have a 15-second/8-MiB bound; metadata has a 30-second/2-MiB bound 
 
 ## Update
 
-For an unpacked installation, replace the files inside the installed `extension/` folder, click **Reload**, and refresh open TOKINT tabs. Keep its folder path unchanged to retain the extension's identity and local settings. Use `tokint` + Tab after updating; the former `eth` keyword and separate `ipfs` companion are retired. Remove the old companion through the browser's extension management page if it is still installed.
+For an unpacked installation, replace the files inside the installed `extension/` folder, click **Reload**, and refresh open TOKINT tabs. Keep its folder path unchanged to retain the extension's identity and local settings. Reloading also applies the current three-bar toolbar icon; the branded icon assets use new filenames to refresh older cached icons. Use `tokint` + Tab after updating; the former `eth` keyword and separate `ipfs` companion are retired. Remove the old companion through the browser's extension management page if it is still installed.
 
 ## Development
 
@@ -308,7 +311,7 @@ Browser tests use temporary profiles and local fixtures, with output under `test
 
 Run `npm audit` with registry access before each release; use `npm outdated` when planning dependency updates. All declared dependencies are used; `gifsicle-wasm-browser` is pinned because the build extracts its embedded runtime. See [VERIFICATION.md](VERIFICATION.md) for actual results and outstanding checks.
 
-The original TOKINT artwork is preserved in `docs/branding/tokint-reference.png`. Editable icon, mark, and wordmark SVGs live in `public/icons/`. After changing the icon master (`tokint.svg`), run `node scripts/render-icons.mjs` to regenerate the 16, 32, 48, and 128 px PNGs, then rebuild the extension. The editable master stays in source; release builds include only the assets the extension uses.
+The original TOKINT artwork is preserved in `docs/branding/tokint-reference.png`. Editable icon, mark, and wordmark SVGs live in `public/icons/`. After changing the icon master (`tokint.svg`), run `node scripts/render-icons.mjs` to regenerate the 16, 32, 48, and 128 px `tokint-brand-*.png` files, then rebuild the extension. The editable master stays in source; release builds include only the assets the extension uses.
 
 Additional tools:
 

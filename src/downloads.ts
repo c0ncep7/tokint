@@ -1,8 +1,21 @@
 import { address, Failure, htmlDataUri, imageDataUri } from './core';
 
-export function downloadName(contract: string, id: bigint, kind: 'media' | 'web', extension: string): string {
+function titleSlug(title: string): string {
+  const slug = title.normalize('NFKD').replace(/\p{M}+/gu, '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-');
+  // Bound UTF-8 bytes as well as characters so long/non-Latin titles fit common
+  // filesystem limits alongside the full address and a uint256 token ID.
+  let result = '', bytes = 0;
+  for (const char of slug) {
+    bytes += new TextEncoder().encode(char).length;
+    if (bytes > 80) break;
+    result += char;
+  }
+  return result.replace(/^-+|-+$/g, '') || 'untitled';
+}
+export function downloadName(contract: string, id: bigint, kind: 'media' | 'web', extension: string, title = ''): string {
   if (id < 0n || !/^[a-z0-9]+$/.test(extension)) throw new Failure('input', 'Invalid download filename.');
-  return `${address(contract).toLowerCase()}--${id}--${kind}.${extension}`;
+  const label = kind === 'web' ? `${titleSlug(title)}--web` : kind;
+  return `${address(contract).toLowerCase()}--${id}--${label}.${extension}`;
 }
 
 export function embeddedMediaBlob(uri: string): Blob {

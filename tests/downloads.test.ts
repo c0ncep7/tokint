@@ -8,6 +8,20 @@ test('download names use the complete contract and lossless decimal token ID', (
   assert.equal(downloadName(contract, 0n, 'media', 'svg'), '0x00000000000000000000000000000000000000ab--0--media.svg');
   assert.throws(() => downloadName(contract, 1n, 'media', '../../html'));
 });
+test('converted download names use a safe lowercase artwork title with bounded length', () => {
+  const prefix = `${contract.toLowerCase()}--410--`;
+  for (const extension of ['jpg', 'gif', 'webp']) {
+    assert.equal(downloadName(contract, 410n, 'web', extension, 'Freedom to Retract'), `${prefix}freedom-to-retract--web.${extension}`);
+  }
+  assert.equal(downloadName(contract, 410n, 'web', 'jpg', '  Café / Night: "Study"?  '), `${prefix}cafe-night-study--web.jpg`);
+  assert.equal(downloadName(contract, 410n, 'web', 'jpg', '../\\\u0000'), `${prefix}untitled--web.jpg`);
+  assert.equal(downloadName(contract, 410n, 'web', 'jpg'), `${prefix}untitled--web.jpg`);
+  assert.equal(downloadName(contract, 410n, 'web', 'jpg', '星 空'), `${prefix}星-空--web.jpg`);
+  const long = downloadName(contract, (1n << 256n) - 1n, 'web', 'webp', '星'.repeat(1000));
+  assert.ok(Buffer.byteLength(long) < 255);
+  assert.ok(!long.includes('\ufffd'));
+  assert.equal(downloadName(contract, 410n, 'media', 'png', 'Freedom to Retract'), `${prefix}media.png`);
+});
 test('base64 and percent-encoded SVG downloads preserve the original bytes', async () => {
   const svg = '<svg xmlns="http://www.w3.org/2000/svg"><text>Café 🌱</text></svg>';
   for (const uri of [`data:image/svg+xml,${encodeURIComponent(svg)}`, `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`]) {

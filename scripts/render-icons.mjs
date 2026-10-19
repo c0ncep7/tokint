@@ -8,6 +8,6 @@ try {
   for (const size of [16, 32, 48, 128]) {
     await page.setViewportSize({ width: size, height: size });
     await page.setContent(`<style>html,body{margin:0;background:transparent}svg{display:block;width:100vw;height:100vh}</style>${svg}`);
-    await page.screenshot({ path: `public/icons/tokint-${size}.png`, omitBackground: true });
+    await page.screenshot({ path: `public/icons/tokint-brand-${size}.png`, omitBackground: true });
   }
 } finally { await browser.close(); }

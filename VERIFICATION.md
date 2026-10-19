@@ -1,8 +1,46 @@
 # Release preparation verification
 
-Date: 2026-10-18. This records local implementation and automated verification;
+Updated: 2026-10-19. This records local implementation and automated verification;
 it is not Chrome Web Store approval or completion of the separately planned
 live-provider and native-browser acceptance checks.
+
+## Converted download filenames: 2026-10-19
+
+- Converted JPEG, GIF and WebP files now use
+  `contract--id--title--web.extension`. The title comes from the loaded token's
+  metadata, is lowercased and hyphenated, and remains associated with that token
+  when form fields change or media selection switches.
+- Filename sanitization removes unsafe characters, preserves Unicode letters,
+  limits the title to 80 UTF-8 bytes, and uses `untitled` when no usable title is
+  available. Full contract addresses and decimal token IDs are retained. Original
+  media filenames retain their existing format.
+- TypeScript, the production build and **130 unit tests** passed, including the
+  requested `freedom-to-retract` example, unsafe/missing titles, large token IDs,
+  and long Unicode titles. The **46 sharing browser checks** passed, including
+  actual JPEG/GIF/WebP downloads and SVG exports with the new names.
+
+## Arweave and icon fix: 2026-10-19
+
+- The reported contract `0x33fd426905f149f8376e227d0c9d3340aad17af1`, token 410,
+  returns an Arweave metadata URL whose root gateway responds with a 302 to its
+  transaction-specific subdomain. Content GETs now calculate that documented
+  destination directly, preserving paths/query/fragment and checking destination
+  permission before any request. RPC URLs, unrelated hosts and gateway API routes
+  are unchanged. General HTTP redirects remain blocked.
+- Regenerated the current three-bar logo at 16/32/48/128 px and switched toolbar,
+  extension-management and page icons to `tokint-brand-*.png` asset names. Reload
+  the installed unpacked extension to apply the manifest/icon references.
+- TypeScript, the build, and **129 unit tests** passed. The inspector browser
+  suite passed **44 checks**, including root-gateway 302 fixtures for the reported
+  token and its artwork. The real-server security suite passed with permission,
+  redirect-chain, POST body, metadata and preview protections retained.
+- A live lookup in an isolated Chrome for Testing 153.0.8010.12 profile loaded
+  **Freedom to Retract**, its metadata, and **2354 × 4200** artwork. Request logs
+  confirmed both content requests used direct transaction subdomains. The new
+  toolbar PNGs decoded at their manifest sizes; a screenshot was inspected.
+- The reported token's metadata check is now included in `test:live` for future
+  releases. The full public-provider test script and the separately scheduled
+  manual publication checklist were not rerun in this follow-up.
 
 ## Current changes
 
@@ -18,7 +56,7 @@ live-provider and native-browser acceptance checks.
 - Restricted remote endpoints/resources to HTTPS, retaining explicit loopback
   HTTP support for local services. Numeric/encoded loopback aliases are rejected.
 
-## Automated verification
+## Release-preparation checks: 2026-10-18
 
 - Strict TypeScript, 127 unit tests, and the production build passed.
 - Full browser regression run passed: inspector (43 checks), media selection/HTML

@@ -1,4 +1,4 @@
-import { Failure, MAX_METADATA, parseMetadata, permissionPattern, readDataJson } from './core';
+import { contentUrl, Failure, MAX_METADATA, parseMetadata, permissionPattern, readDataJson } from './core';
 
 export type NetworkOptions = {
   signal?: AbortSignal;
@@ -12,6 +12,7 @@ export async function requireAccess(url: string, opts: NetworkOptions = {}) {
   if (!allowed) throw new Failure('permission', `Allow access to ${new URL(url).origin} to continue.`, origin);
 }
 async function requestBody(url: string, kind: 'rpc' | 'metadata' | 'gateway' | 'image', limit: number, opts: NetworkOptions = {}, init: RequestInit = {}): Promise<{ blob: Blob; url: string; contentType: string }> {
+  if (kind !== 'rpc' && (!init.method || init.method.toUpperCase() === 'GET')) url = contentUrl(url);
   await requireAccess(url, opts);
   opts.signal?.throwIfAborted();
   const controller = new AbortController();

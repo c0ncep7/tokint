@@ -68,7 +68,7 @@ try {
   assert.ok(info.uniqueFrames > 10); assert.ok(info.bytes <= 15_000_000);
   const event = page.waitForEvent('download'); await page.locator('#share-download').click();
   const download = await event;
-  assert.equal(download.suggestedFilename(), `${contract}--10--web.${format}`);
+  assert.equal(download.suggestedFilename(), `${contract}--10--local-svg-verification--web.${format}`);
   await download.saveAs(`test-results/${download.suggestedFilename()}`);
   await page.screenshot({ path: 'test-results/svg-file-export.png', fullPage: true });
   await page.locator('#close-share-modal').click();
