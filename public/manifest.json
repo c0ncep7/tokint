@@ -2,10 +2,10 @@
   "manifest_version": 3,
   "name": "TOKINT",
   "version": "1.0.0",
-  "description": "Contract, NFT metadata, and IPFS lookups from your address bar. Type eth, then Tab.",
+  "description": "Contract, NFT metadata, and IPFS lookups from your address bar. Type tokint, then Tab.",
   "minimum_chrome_version": "109",
   "omnibox": {
-    "keyword": "eth"
+    "keyword": "tokint"
   },
   "background": {
     "service_worker": "background.js",
@@ -34,16 +34,12 @@
   ],
   "optional_host_permissions": [
     "https://*/*",
-    "http://*/*"
+    "http://localhost/*",
+    "http://127.0.0.1/*"
   ],
   "content_security_policy": {
-    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'none'; base-uri 'none'; frame-src 'self'; img-src 'self' blob: data:; connect-src 'self' https: http:; style-src 'self'",
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'none'; base-uri 'none'; frame-src 'self'; img-src 'self' blob: data:; connect-src 'self' https: http://localhost:* http://127.0.0.1:*; style-src 'self'",
     "sandbox": "sandbox allow-scripts; default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; media-src data: blob:; connect-src 'none'; frame-src 'none'; worker-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"
-  },
-  "externally_connectable": {
-    "ids": [
-      "bgbgiojoaobiicphllalmdjfjplcpbdo"
-    ]
   },
   "icons": {
     "16": "icons/tokint-16.png",

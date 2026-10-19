@@ -15,7 +15,7 @@ const bundle = async options => {
 };
 const pkg = JSON.parse(await readFile('package.json', 'utf8'));
 const lock = JSON.parse(await readFile('package-lock.json', 'utf8'));
-for (const file of ['public/manifest.json', 'companion/manifest.json']) {
+for (const file of ['public/manifest.json']) {
   const manifest = JSON.parse(await readFile(file, 'utf8'));
   if (manifest.version !== pkg.version) throw new Error(`Version mismatch: ${file} must match package.json (${pkg.version}).`);
 }
@@ -40,23 +40,18 @@ for (const [folder, entry] of Object.entries(lock.packages)) {
   if (!folder || entry.dev) continue;
   const pkg = JSON.parse(await readFile(`${folder}/package.json`, 'utf8'));
   notices += `\n${'='.repeat(72)}\n${pkg.name} ${pkg.version} — ${pkg.license || 'See license below'}\n`;
+  if (pkg.name === 'multiformats') notices += '\nTOKINT distributes multiformats under its MIT license option.\n';
   const files = (await readdir(folder)).filter(name => /^(license|licence|copying)(\.|$)/i.test(name));
   for (const file of files) notices += `\n${await readFile(`${folder}/${file}`, 'utf8')}\n`;
 }
 notices += '\nGifsicle 1.92 WebAssembly optimizer — GNU GPL v2\nSource and integration notes: vendor/gifsicle/ in the source distribution.\n' + await readFile('vendor/gifsicle/COPYING', 'utf8');
+notices += '\nwasm-codecs Gifsicle integration — MIT\n' + await readFile('vendor/gifsicle/WASM_CODECS_LICENSE', 'utf8');
 await writeFile('extension/THIRD_PARTY_NOTICES.txt', notices);
+for (const file of ['LICENSE', 'PRIVACY.md', 'DISTRIBUTION.md']) await cp(file, `extension/${file}`);
 console.log('Ready to load: extension/');
 
+// Remove the obsolete companion from earlier builds when upgrading this checkout.
 await rm('ipfs-extension', { recursive: true, force: true });
-await cp('companion', 'ipfs-extension', { recursive: true });
-await cp('public/styles.css', 'ipfs-extension/styles.css');
-await mkdir('ipfs-extension/icons');
-for (const icon of ['tokint-16.png', 'tokint-32.png', 'tokint-48.png', 'tokint-128.png', 'tokint-mark.svg', 'tokint-wordmark.svg']) {
-  await cp(`public/icons/${icon}`, `ipfs-extension/icons/${icon}`);
-}
-await bundle({ entryPoints: ['src/ipfs-background.ts', 'src/ipfs-options.ts'], outdir: 'ipfs-extension', bundle: true, format: 'esm', splitting: true, target: 'chrome109', minify: true, legalComments: 'eof' });
-await writeFile('ipfs-extension/THIRD_PARTY_NOTICES.txt', notices);
-console.log('Optional ipfs + Tab shortcut: ipfs-extension/');
 
 async function checksums(folder) {
   const lines = [];
@@ -67,7 +62,7 @@ async function checksums(folder) {
   }
   return lines;
 }
-await writeFile('SHA256SUMS.txt', [...await checksums('extension'), ...await checksums('ipfs-extension')].join('\n') + '\n');
+await writeFile('SHA256SUMS.txt', (await checksums('extension')).join('\n') + '\n');
 console.log('Updated SHA256SUMS.txt');
 
 async function sizes(folder) {
@@ -87,7 +82,7 @@ for (const meta of metafiles) for (const output of Object.values(meta.outputs)) 
   }
 }
 const bundles = {};
-for (const folder of ['extension', 'ipfs-extension']) {
+for (const folder of ['extension']) {
   const files = await sizes(folder);
   bundles[folder] = { bytes: files.reduce((sum, file) => sum + file.bytes, 0), files };
   console.log(`${folder}: ${(bundles[folder].bytes / 1024).toFixed(1)} KiB unpacked (${files.length} files)`);

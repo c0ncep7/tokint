@@ -1,0 +1,39 @@
+{
+  "verifiedOn": "2026-10-18",
+  "wrapper": {
+    "repository": "https://github.com/renzhezhilu/gifsicle-wasm-browser",
+    "commit": "7033183ee0db22bb339a878571d743b9642e1c77",
+    "npmPackage": "gifsicle-wasm-browser@1.5.19",
+    "distSHA256": "c2b9ef1acd3ca20a0795fec66496a24ec6001f53836113c0255bd4464662a9cd",
+    "runtimeRebuiltWith": "uglify-js@3.16.1",
+    "runtimeMatchesNpm": true
+  },
+  "wasm": {
+    "bytes": 217106,
+    "sha256": "b4d9f84e5f8aa7cbe7cc2f90431b511456593324cb4aa75fcabf4ada8c218e05",
+    "matches": [
+      "gifsicle-wasm-browser@1.5.19 embedded WASM",
+      "wrapper src/gifsicle.wasm at recorded commit",
+      "@wasm-codecs/gifsicle@1.0.0 lib/gifsicle.wasm"
+    ],
+    "freshCBuildPerformed": false
+  },
+  "compilerIntegration": {
+    "repository": "https://github.com/cyrilwanner/wasm-codecs",
+    "commit": "89fb54b412e262832d61d9da5b4deb02ead184d4",
+    "upstreamContainer": "trzeci/emscripten:1.39.18-upstream",
+    "npmTarballSHA256": "d326c8731f54a06d7e7434bfec9241c8ddff9e6064804d96c1b7facd0a024122"
+  },
+  "cSource": {
+    "repository": "https://github.com/kohler/gifsicle",
+    "tag": "v1.92",
+    "commit": "1e2ca7401692ba94d7405de6e9dd1d1e73ca880f",
+    "license": "GPL-2.0-only"
+  },
+  "archivesSHA256": {
+    "gifsicle-1.92.tar.gz": "5ab556c01d65fddf980749e3ccf50b7fd40de738b6df679999294cc5fabfce65",
+    "gifsicle-1e2ca74-source.tar.gz": "4086b1dcd2cbd90b3e7112e5ef3547eed3a9b412f92d311e4ef68199f518ecf6",
+    "gifsicle-wasm-browser-7033183-source.tar.gz": "29e68a02577ed9478f87a0f8995012370d71c3bf59d2adfa7c20432fb6d54ef7",
+    "wasm-codecs-89fb54b-source.tar.gz": "6e0dc82f5085e65f7a1840e0791f9f3e7f5c29de239d0d4c304345e6600011ec"
+  }
+}

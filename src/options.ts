@@ -1,6 +1,5 @@
 import { setBusy } from './loading';
 import { RPC_PRESETS, rpcPreset, validateAlchemyRpc } from './rpc-presets';
-import { IPFS_COMPANION_ID } from './ipfs-companion-id';
 import { DEFAULTS, GATEWAYS, settings, type Settings } from './core';
 import { getSettings, saveSettings } from './storage';
 const rpc = document.querySelector<HTMLInputElement>('#rpc-url')!;
@@ -18,22 +17,10 @@ function updateRpc(changed = false) {
   if (selected) rpc.value = selected.url;
   else if (changed && rpcSelect.value === 'alchemy') rpc.value = alchemyUrl;
   rpc.placeholder = rpcSelect.value === 'alchemy' ? 'https://eth-mainnet.g.alchemy.com/v2/…' : 'https://…';
-  rpcNote.textContent = selected?.note ?? (rpcSelect.value === 'alchemy' ? 'Optional personal endpoint. Requires an Alchemy account.' : 'Enter an Ethereum mainnet HTTP(S) RPC endpoint.');
+  rpcNote.textContent = selected?.note ?? (rpcSelect.value === 'alchemy' ? 'Optional personal endpoint. Requires an Alchemy account.' : 'Enter an Ethereum mainnet HTTPS RPC endpoint. HTTP is supported only for localhost or 127.0.0.1.');
 }
 rpc.addEventListener('input', () => { if (rpcSelect.value === 'alchemy') alchemyUrl = rpc.value; });
 rpcSelect.addEventListener('change', () => updateRpc(true));
-document.querySelector('#connect-ipfs')!.addEventListener('click', () => {
-  const button = document.querySelector<HTMLButtonElement>('#connect-ipfs')!;
-  const note = document.querySelector<HTMLElement>('#ipfs-connection-status')!;
-  button.disabled = true;
-  setBusy(note, true); note.textContent = 'Contacting IPFS shortcut…';
-  void chrome.runtime.sendMessage(IPFS_COMPANION_ID, { type: 'tokint-connect' }).then(reply => {
-    if (reply?.type !== 'tokint-connect' || reply.opened !== true) throw new Error('Companion unavailable');
-    note.textContent = 'Finish connecting in the IPFS shortcut tab.';
-  }).catch(() => {
-    note.textContent = 'IPFS shortcut is unavailable. In brave://extensions (or chrome://extensions), choose Load unpacked and select the ipfs-extension folder from this download. If already installed, enable it and reload both extensions using the latest files. Then try Connect IPFS shortcut again.';
-  }).finally(() => { button.disabled = false; setBusy(note, false); });
-});
 const gateway = document.querySelector<HTMLInputElement>('#gateway-url')!;
 const style = document.querySelector<HTMLSelectElement>('#gateway-style')!;
 const status = document.querySelector<HTMLElement>('#settings-status')!;

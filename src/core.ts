@@ -25,10 +25,14 @@ export function tokenId(value: string): bigint {
   if (id > MAX_UINT256) throw new Failure('input', 'Token ID exceeds the uint256 limit.');
   return id;
 }
+/** HTTPS for remote hosts; plain HTTP only for literal localhost or 127.0.0.1.
+ * Check the original authority too, so numeric/encoded host aliases cannot bypass this rule.
+ */
 export function httpUrl(value: string): URL {
   let u: URL;
-  try { u = new URL(value); } catch { throw new Failure('input', 'Enter a valid HTTP or HTTPS URL.'); }
-  if (!['http:', 'https:'].includes(u.protocol) || u.username || u.password) throw new Failure('input', 'Only HTTP and HTTPS URLs without embedded usernames or passwords are supported.');
+  try { u = new URL(value); } catch { throw new Failure('input', 'Enter a valid HTTPS URL (HTTP is allowed only for localhost or 127.0.0.1).'); }
+  const localHttp = u.protocol === 'http:' && /^http:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?(?:[/?#]|$)/i.test(value.trim());
+  if ((u.protocol !== 'https:' && !localHttp) || u.username || u.password) throw new Failure('input', 'Use HTTPS without embedded usernames or passwords. HTTP is allowed only for localhost or 127.0.0.1.');
   return u;
 }
 export function settings(value: Settings): Settings {
@@ -84,7 +88,7 @@ export function resolveUri(value: string, prefs: Settings, base?: string): strin
     }
     return httpUrl(new URL(raw, base).href).href;
   }
-  throw new Failure('input', 'This URI scheme is not supported. Use IPFS, HTTP(S), or embedded data.');
+  throw new Failure('input', 'This URI scheme is not supported. Use IPFS, HTTPS, embedded data, or HTTP on a loopback host.');
 }
 export function substituteId(value: string, id: bigint): string { return value.replaceAll('{id}', id.toString(16).padStart(64, '0')); }
 export function explorer(contract: string): string { return `https://etherscan.io/address/${address(contract)}#readContract`; }

@@ -1,25 +1,49 @@
-# Distribution status
+# License and distribution
 
-The project owner has not yet selected a top-level project license. Generating
-release archives does not choose distribution terms or establish publication
-readiness. This file records the outstanding decision; it is not a license.
+TOKINT's original code is licensed under **GNU GPL version 2 only**
+(`GPL-2.0-only`); see [LICENSE](LICENSE). Copyright TOKINT contributors.
+This choice accommodates the bundled Gifsicle 1.92 optimizer, whose upstream
+license specifies GPL version 2 only. It is not a GPL version 2-or-later grant.
 
-Gifsicle is retained for local GIF optimization when the initial encoded output
-exceeds the requested size limit. Its WebAssembly runtime is loaded on demand.
-The bundled Gifsicle 1.92 component is identified as GPL v2; the
-gifsicle-wasm-browser 1.5.19 wrapper is MIT. See `vendor/gifsicle/COPYING`,
-`vendor/gifsicle/README.txt`, and the generated `THIRD_PARTY_NOTICES.txt` files.
+Third-party components retain their own copyright notices and licenses.
+The `gifsicle-wasm-browser` JavaScript wrapper and wasm-codecs integration are
+MIT licensed. TOKINT uses the MIT option for dual-licensed `multiformats`.
+Generated `THIRD_PARTY_NOTICES.txt` includes runtime dependency licenses and
+Gifsicle's license. Service logos and trademarks remain subject to their owners'
+rights; the code license does not grant trademark rights. See the
+[service-logo notes](docs/branding/service-logos.md).
 
-Before publication, the owner must select the project's distribution terms and
-resolve their compatibility with the bundled components. Replacing or removing
-the optimizer would change compression behavior and needs separate validation.
+## Build and release
 
-`npm run release` builds both extensions and produces ZIPs, a corresponding
-source archive, a bundle report, this note, and SHA-256 checksums under
-`releases/<version>/`. The source archive includes the lockfile, build scripts,
-tests, Gifsicle source archive, license, and integration notes. A top-level
-LICENSE, LICENCE, or COPYING file is included automatically when one is added.
-Keep the corresponding source archive with the binary release artifacts.
+With Node.js 22 or later, run `npm ci`, `npm run test:release`, then
+`npm run package:store`. Packaging builds the single extension and writes:
 
-Packaging does not run the browser suites or publish anything. Run
-`npm run test:release` and review `VERIFICATION.md` before publication.
+- `tokint-<version>-chrome-web-store.zip`: upload this ZIP; `manifest.json` is at its root.
+- `tokint-<version>.zip`: extract and load its `extension/` directory for manual installation.
+- `tokint-<version>-source.zip`: source, lockfile, build scripts, tests, documentation,
+  and the vendored Gifsicle source/build materials.
+- Licenses, privacy/submission notes, bundle report, and `SHA256SUMS.txt`.
+
+All artifacts are under `releases/<version>/`. Packaging validates entry points
+and required legal/privacy files; it does not run the test suites or publish
+anything. Review [VERIFICATION.md](VERIFICATION.md) for actual test results.
+
+## Matching source and notices
+
+Publish the matching source archive with every binary release, keep it available
+to recipients, and link it clearly from the store listing/support site. Preserve
+the GPL license and dependency notices. If you change the code or bundled binary,
+regenerate and publish matching source rather than pointing users at an unrelated
+branch or a newer version. The GPL's distribution conditions apply to redistributors
+as well as the original publisher.
+
+`vendor/gifsicle/` includes the Gifsicle 1.92 C source archive, its license,
+preferred wrapper/glue source, upstream compiler recipes, and provenance notes.
+The build extracts the pinned npm package's WASM and adapts its JavaScript runtime
+to an extension-local module. Its source provenance is documented separately from
+reproducibility: a fresh, byte-identical WASM rebuild is not claimed.
+
+The source archive records the JavaScript dependencies in `package-lock.json`;
+`npm ci` retrieves their pinned packages. Dependency notices are included
+in both installed and source artifacts. See `vendor/gifsicle/README.txt` for
+optimizer upstream source/build details.

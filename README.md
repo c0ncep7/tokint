@@ -14,7 +14,7 @@ A Chromium extension for Ethereum mainnet contract inspection, NFT metadata, IPF
 
 ## Install
 
-Use Chrome, Brave, or another Chromium browser that supports unpacked Manifest V3 extensions. The manifests require Chromium 109 or later; use a current browser for media decoding and conversion support.
+Use Chrome, Brave, or another Chromium browser that supports unpacked Manifest V3 extensions. The manifest requires Chromium 109 or later; use a current browser for media decoding and conversion support.
 
 1. Extract the release folder to a permanent location. If you have source only, [build it](#development) first.
 2. Open `chrome://extensions`, `brave://extensions`, or `edge://extensions`.
@@ -23,18 +23,9 @@ Use Chrome, Brave, or another Chromium browser that supports unpacked Manifest V
 
 The supplied build needs no Node.js installation. Settings are available from the inspector's gear icon or the browser's extension management page.
 
-Release ZIPs contain `extension/` or `ipfs-extension/`; extract the appropriate
-ZIP before choosing **Load unpacked**. The source ZIP is for development.
+The manual-install ZIP, `tokint-<version>.zip`, contains `extension/`; extract it before choosing **Load unpacked**. The separate `tokint-<version>-chrome-web-store.zip` is for store submission, and the source ZIP is for development.
 
-### Optional `ipfs` shortcut
-
-Chromium permits one address-bar keyword per extension. The main extension uses `eth`; the companion adds `ipfs`:
-
-1. Load **`ipfs-extension/`** as a second unpacked extension.
-2. In tokint Settings, click **Connect IPFS shortcut**, then **Connect** on the companion page.
-3. Type `ipfs`, press **Tab**, enter a CID/path or `ipfs://` URI, and press **Enter**.
-
-The companion reads the main extension's saved gateway on each submission. It has only storage permission and receives the gateway URL/style, never the RPC configuration. If connecting fails, check that both extensions are enabled and reloaded. Reconnect after moving or reinstalling the main extension.
+TOKINT uses one extension and one address-bar keyword: **`tokint` + Tab**. It recognizes Ethereum addresses, address/token-ID pairs, and IPFS references automatically. If upgrading from the former two-extension setup, remove the old **TOKINT IPFS** companion from the browser; it is no longer needed.
 
 ## Inspect a token
 
@@ -46,19 +37,20 @@ Click the toolbar button on an OpenSea, SuperRare, or other HTTP(S) page with ad
 
 ### Address-bar commands
 
-Type `eth`, press **Tab**, then enter:
+Type `tokint`, press **Tab**, then enter:
 
 | Input | Action |
 | --- | --- |
 | `0x<40-hex-character address>` | Open Etherscan Read Contract |
 | `0x<address> 123` | Inspect token 123 |
-| `ipfs://<CID>/path` or `<CID>/path` | Open the configured IPFS gateway |
+| `ipfs://<CID>/path`, `<CID>/path`, or `/ipfs/<CID>/path` | Open the configured IPFS gateway |
+| An IPFS gateway URL, such as `https://ipfs.io/ipfs/<CID>/path` | Open the same IPFS reference through the configured gateway |
 
 For example, `0xff9c1b15b16263c61d017ee9f65c50e4ae0113d7 1` inspects Loot #1. Suggestions make no network requests; requests begin after submission.
 
 ### Recent tokens and cache
 
-The inspector remembers the last **30 distinct successfully loaded tokens**. Selecting a recent token restores its address, exact ID, and metadata method. Metadata and successfully decoded preview originals are cached in IndexedDB for **24 hours**, within a **50 MiB** total payload budget. Older snapshots are evicted as needed; recent-token shortcuts can remain after their files are evicted.
+The inspector remembers the last **30 distinct successfully loaded tokens**. Selecting a recent token restores its address, exact ID, and metadata method. Metadata and successfully decoded preview originals are cached in IndexedDB and eligible for reuse for **24 hours**, within a **50 MiB** total payload budget. Expired snapshots are removed during cache maintenance rather than by an exact deletion timer. Older snapshots are evicted as needed; recent-token shortcuts can remain after their files are evicted.
 
 **Cached · time** identifies reused metadata. Fully cached tokens can reopen offline. **Refresh** bypasses the application and HTTP caches and fetches the contract, metadata, and media again. Changing RPC or gateway settings also makes previous snapshots ineligible. Cache failures do not block ordinary lookups.
 
@@ -112,11 +104,10 @@ Open Settings with the inspector's gear icon. Changes apply after **Save setting
 | Setting | Default | Purpose and choices |
 | --- | --- | --- |
 | Ethereum mainnet RPC provider | PublicNode | PublicNode, dRPC, 1RPC, optional Alchemy, or Custom RPC. Used for contract reads; the endpoint must report chain ID 1. |
-| Ethereum mainnet RPC URL | `https://ethereum-rpc.publicnode.com` | Presets fill this automatically. Custom endpoints accept HTTP(S) without embedded username/password credentials. Use HTTPS for remote providers. |
+| Ethereum mainnet RPC URL | `https://ethereum-rpc.publicnode.com` | Presets fill this automatically. Use HTTPS without embedded username/password credentials. Plain HTTP is accepted only for literal `localhost` or `127.0.0.1` addresses, with an optional port. |
 | Public IPFS gateway | Pinata | Pinata, Filebase, IPFS.io, dweb.link, or Custom gateway. IPFS references are resolved through this provider. |
-| IPFS gateway base URL | `https://gateway.pinata.cloud` | A base URL with no `/ipfs/` path, query, or fragment. Select Custom gateway to edit it. |
+| IPFS gateway base URL | `https://gateway.pinata.cloud` | An HTTPS base URL with no `/ipfs/` path, query, or fragment. Plain HTTP is allowed only on the same literal loopback hosts as RPC URLs. Select Custom gateway to edit it. |
 | Gateway URL style | Path | Path produces `gateway/ipfs/CID/path`; Subdomain produces `CID.ipfs.gateway/path`. Localhost/IP-address gateways require Path. Presets choose their own style. |
-| IPFS address-bar shortcut | Disconnected | Connect the optional companion so `ipfs` + Tab follows the saved gateway. |
 
 **Restore defaults** fills the form; click **Save settings** to apply it. Theme is changed separately with the sun/moon button. Clearing Recents removes history and cached files without changing settings.
 
@@ -132,9 +123,11 @@ Requests begin only when you use these controls. Selecting a token opens its ori
 
 ## Privacy, permissions, and errors
 
+Read the [privacy policy](public/privacy.html) for local storage, retention, third-party requests, and deletion details. [PRIVACY.md](PRIVACY.md) explains how to publish its public URL for the store listing; [Web Store submission notes](docs/WEB_STORE.md) provide permission justifications, privacy declarations, and the sandbox explanation for reviewers.
+
 Settings, the last contract, theme, and recent tokens stay in local browser storage. Providers receive the RPC/content requests you submit. There are no analytics, wallet connections, signing requests, content scripts, or background polling. Toolbar detection uses temporary `activeTab` access and reads the clicked tab's URL without fetching or injecting into its page.
 
-The main extension requests storage, `activeTab`, and host access for PublicNode, Pinata, and Arweave. OpenSea toolbar detection needs no permanent OpenSea host permission. Other HTTP(S) hosts are optional. **Allow and retry** requests access after a user click; declining leaves source links available. Revoke optional access through the browser's extension management page. Requests omit cookies and referrers. Automatic redirects, including same-host redirects, are blocked before following them; outbound links use the browser's normal navigation behavior. See [verification notes](VERIFICATION.md) for the tested security boundaries.
+TOKINT requests storage, `activeTab`, and host access for PublicNode, Pinata, and Arweave. OpenSea toolbar detection needs no permanent OpenSea host permission. Other HTTPS hosts and the literal HTTP loopback hosts `localhost` and `127.0.0.1` are optional. Remote plain-HTTP RPC, metadata, media, and gateway requests are rejected; use a direct HTTPS endpoint. **Allow and retry** requests access after a user click; declining leaves source links available. Revoke optional access through the browser's extension management page. Requests omit cookies and referrers. Automatic redirects, including same-host redirects, are blocked before following them; outbound links use the browser's normal navigation behavior. See [verification notes](VERIFICATION.md) for the tested security boundaries.
 
 | Error | Suggested action |
 | --- | --- |
@@ -149,7 +142,7 @@ RPC requests have a 15-second/8-MiB bound; metadata has a 30-second/2-MiB bound 
 
 ## Update
 
-Replace the files inside the installed `extension/` and optional `ipfs-extension/` folders, then click **Reload** for each extension and refresh open tokint tabs. Keep folder paths unchanged to retain the main extension's identity and local settings. If its identity changes, reconnect the IPFS companion. Update both extensions together.
+For an unpacked installation, replace the files inside the installed `extension/` folder, click **Reload**, and refresh open TOKINT tabs. Keep its folder path unchanged to retain the extension's identity and local settings. Use `tokint` + Tab after updating; the former `eth` keyword and separate `ipfs` companion are retired. Remove the old companion through the browser's extension management page if it is still installed.
 
 ## Development
 
@@ -160,25 +153,31 @@ npm ci
 npm run check
 ```
 
-`check` runs strict TypeScript checking, deterministic unit tests, and the production build. The build replaces `extension/` and `ipfs-extension/`, packages local JavaScript/WebAssembly and third-party notices, and regenerates `SHA256SUMS.txt`. Both source manifests and the lockfile must match the version in `package.json`. Edit source files, not generated builds.
+`check` runs strict TypeScript checking, deterministic unit tests, and the production build. The build replaces `extension/`, removes a stale generated `ipfs-extension/` directory from older builds, packages local JavaScript/WebAssembly, licenses, privacy information, and third-party notices, and regenerates `SHA256SUMS.txt`. The source manifest and lockfile must match the version in `package.json`. Edit source files, not generated builds.
 
 Every build also writes `bundle-report.json` with exact unpacked file sizes,
 JavaScript dependency contributions, and esbuild metadata. Copied WASM and its
 runtime appear in the file sizes, separately from esbuild's contributions.
 
-Generate local release artifacts with:
+Generate production packages for store submission and manual installation with:
 
 ```sh
-npm run release
+npm run package:store
 ```
 
-This rebuilds and writes the main extension ZIP, optional companion ZIP,
-corresponding source ZIP, bundle report, distribution note, and checksums to
-`releases/<version>/`. It uses Node.js without a system archive tool. Entries have
-fixed timestamps and stable ordering; unchanged inputs on the same toolchain
-produce identical archives. Repeating the command replaces that version's local
-artifacts. It does not publish or run the browser tests. See
-[DISTRIBUTION.md](DISTRIBUTION.md) for the unresolved project license decision.
+`npm run release` runs the same packaging step. It rebuilds and writes these artifacts to `releases/<version>/`:
+
+| Artifact | Purpose |
+| --- | --- |
+| `tokint-<version>-chrome-web-store.zip` | Upload to the Chrome Web Store; `manifest.json` is at the archive root |
+| `tokint-<version>.zip` | Manual installation; contains the `extension/` folder |
+| `tokint-<version>-source.zip` | Corresponding source, lockfile, tests, build scripts, vendor source, licenses, privacy policy, and reviewer notes |
+| `bundle-report.json`, `LICENSE`, `DISTRIBUTION.md`, `PRIVACY.md`, `WEB_STORE.md` | Build report and distribution/submission documentation |
+| `SHA256SUMS.txt` | SHA-256 checksums for the release artifacts |
+
+Packaging checks the store manifest version and required entry points and legal/privacy files. It uses Node.js without a system archive tool. Entries have fixed timestamps and stable ordering; unchanged inputs on the same toolchain produce identical archives. Repeating the command replaces that version's local artifacts. Packaging does not publish or run browser tests.
+
+TOKINT is licensed under **GPL-2.0-only**; see [LICENSE](LICENSE) and [distribution requirements](DISTRIBUTION.md). Make the matching source archive available alongside each binary release. Before submission, publish the [privacy policy](public/privacy.html) at a public HTTPS URL, complete the listing and reviewer fields in [docs/WEB_STORE.md](docs/WEB_STORE.md), and perform the separate real-world release checks in [VERIFICATION.md](VERIFICATION.md).
 
 For the complete automated release checks:
 
@@ -193,11 +192,11 @@ Browser tests use temporary profiles and local fixtures, with output under `test
 | --- | --- |
 | `npm test` | Deterministic unit tests |
 | `npm run typecheck` | Source, unit tests, and live-check script |
-| `npm run build` | Both unpacked extensions, notices, and checksums |
-| `npm run release` | Rebuild and package both extensions, corresponding source, report, and archive checksums |
+| `npm run build` | Unpacked extension, licenses/privacy policy, notices, and checksums |
+| `npm run package:store` / `npm run release` | Rebuild and package store/manual ZIPs, corresponding source, documentation, report, and checksums |
 | `npm run test:offline` | Local JPEG/WebP/GIF conversion with external requests blocked, WASM optimization, and unavailable browser capabilities |
 | `npm run test:browser` | Inspector, conversion, cache, and Alchemy browser suites |
-| `npm run test:config` | Settings, companion pairing, and missing-companion recovery |
+| `npm run test:config` | Settings, gateway configuration, and URL validation |
 | `npm run test:opensea` | Actual toolbar actions, including generic token URLs |
 | `npm run test:cache` / `npm run test:alchemy` | Focused browser suites |
 | `npm run test:live` | Optional read-only mainnet and IPFS checks; requires network access |
@@ -206,7 +205,7 @@ Browser tests use temporary profiles and local fixtures, with output under `test
 
 Run `npm audit` with registry access before each release; use `npm outdated` when planning dependency updates. All declared dependencies are used; `gifsicle-wasm-browser` is pinned because the build extracts its embedded runtime. See [VERIFICATION.md](VERIFICATION.md) for actual results and outstanding checks.
 
-The original TOKINT artwork is preserved in `docs/branding/tokint-reference.png`. Editable icon, mark, and wordmark SVGs live in `public/icons/`. After changing the icon master (`tokint.svg`), run `node scripts/render-icons.mjs` to regenerate the 16, 32, 48, and 128 px PNGs, then rebuild both extensions. The editable master stays in source; release builds include only the assets each extension uses.
+The original TOKINT artwork is preserved in `docs/branding/tokint-reference.png`. Editable icon, mark, and wordmark SVGs live in `public/icons/`. After changing the icon master (`tokint.svg`), run `node scripts/render-icons.mjs` to regenerate the 16, 32, 48, and 128 px PNGs, then rebuild the extension. The editable master stays in source; release builds include only the assets the extension uses.
 
 Additional tools:
 
@@ -224,11 +223,12 @@ The interactive tool opens an isolated manual-test browser. The icon tool render
 | Path | Contents |
 | --- | --- |
 | `src/` | Parsing, networking, contract reads, cache, UI, and conversion workers |
-| `public/` | Main extension manifest, HTML, CSS, and icons |
-| `companion/` | IPFS companion manifest and HTML |
+| `public/` | Extension manifest, HTML, CSS, icons, and canonical `privacy.html` |
 | `tests/` | Unit tests and media fixtures |
 | `scripts/` | Build, browser suites, and manual verification tools |
 | `vendor/gifsicle/` | Gifsicle source archive, license, and integration notes |
-| `extension/`, `ipfs-extension/` | Generated unpacked builds |
+| `extension/` | Generated unpacked build |
+| `docs/WEB_STORE.md` | Store permission/privacy declarations and reviewer notes |
+| `LICENSE`, `DISTRIBUTION.md`, `PRIVACY.md` | Project license, source distribution requirements, and privacy-policy hosting guidance |
 
-Each build includes `THIRD_PARTY_NOTICES.txt`. The GIF optimizer includes Gifsicle under GPL v2; keep its accompanying source, license, and integration notes in the source distribution. This repository currently has no top-level project license; choose the project's distribution terms before publishing it as open source.
+TOKINT is distributed under the GNU General Public License version 2 only ([LICENSE](LICENSE)). Each build includes `THIRD_PARTY_NOTICES.txt` for components with their own license notices. The GIF optimizer includes Gifsicle under GPL v2; keep its corresponding source, license, and integration notes with the source distribution. Multiformats is distributed under its MIT license option. See [DISTRIBUTION.md](DISTRIBUTION.md) for the release obligations and component details.

@@ -1,12 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { CID } from 'multiformats/cid';
-import { DEFAULTS } from '../src/core';
+import { DEFAULTS, type Settings } from '../src/core';
 
 test('omnibox events route addresses, tokens and IPFS with the requested tab disposition', async () => {
   let entered: (text: string, disposition: string) => void = () => {};
   let changed: (text: string, suggest: (results: unknown[]) => void) => void = () => {};
   let storedReads = 0;
+  let prefs: Settings = DEFAULTS;
   const navigations: { kind: string; url: string; active?: boolean }[] = [];
   const suggestions: { description: string }[] = [];
   const fake = {
@@ -16,8 +17,8 @@ test('omnibox events route addresses, tokens and IPFS with the requested tab dis
       onInputStarted: { addListener: () => {} },
       setDefaultSuggestion: async (value: { description: string }) => { suggestions.push(value); },
     },
-    runtime: { onMessageExternal: { addListener: () => {} }, getURL: (file: string) => `chrome-extension://test/${file}` },
-    storage: { local: { get: async () => { storedReads++; return { settings: DEFAULTS, settingsVersion: 2 }; } } },
+    runtime: { getURL: (file: string) => `chrome-extension://test/${file}` },
+    storage: { local: { get: async () => { storedReads++; return { settings: prefs, settingsVersion: 2 }; } } },
     tabs: {
       get: async () => { throw new Error('Tab unavailable'); },
       query: async () => [],
@@ -42,6 +43,11 @@ test('omnibox events route addresses, tokens and IPFS with the requested tab dis
   const cid = CID.parse('QmYwAPJzv5CZsnAzt8auVTLnEKjHhhtvE4s1wKpR1X4M8F').toV1().toString();
   entered(`ipfs://${cid}/metadata.json`, 'newBackgroundTab'); await turn();
   assert.deepEqual(navigations.at(-1), { kind: 'create', url: `https://gateway.pinata.cloud/ipfs/${cid}/metadata.json`, active: false });
+  prefs = { ...DEFAULTS, gatewayUrl: 'https://dweb.link', gatewayStyle: 'subdomain' };
+  entered(`https://gateway.pinata.cloud/ipfs/${cid}/nested/art%20work.svg?download=1#frame`, 'currentTab'); await turn();
+  assert.deepEqual(navigations.at(-1), { kind: 'update', url: `https://${cid}.ipfs.dweb.link/nested/art%20work.svg?download=1#frame` });
+  entered(`${cid}/nested/art.svg`, 'newForegroundTab'); await turn();
+  assert.deepEqual(navigations.at(-1), { kind: 'create', url: `https://${cid}.ipfs.dweb.link/nested/art.svg`, active: true });
   entered('invalid text', 'currentTab'); await turn();
   assert.equal(new URLSearchParams(new URL(navigations.at(-1)!.url).hash.slice(1)).has('error'), true);
 });

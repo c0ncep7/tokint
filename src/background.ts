@@ -15,7 +15,7 @@ chrome.omnibox.onInputChanged.addListener((text, suggest) => {
   suggest([]);
 });
 chrome.omnibox.onInputStarted.addListener(() => { void chrome.omnibox.setDefaultSuggestion({ description: suggestion('') }); });
-async function destination(text: string) {
+export async function destination(text: string) {
   try {
     const query = parseQuery(text);
     if (query.kind === 'contract') return explorer(query.contract);
@@ -31,12 +31,4 @@ chrome.omnibox.onInputEntered.addListener((text, disposition) => {
     if (disposition === 'currentTab') await chrome.tabs.update({ url });
     else await chrome.tabs.create({ url, active: disposition !== 'newBackgroundTab' });
   })().catch(console.error);
-});
-
-// Only the bundled IPFS companion can request the gateway configuration.
-import { allowedGatewayRequest, gatewayReply } from './ipfs-bridge';
-chrome.runtime.onMessageExternal.addListener((message, sender, reply) => {
-  if (!allowedGatewayRequest(message, sender.id)) return false;
-  void getSettings().then(prefs => reply(gatewayReply(prefs))).catch(() => reply({ error: 'Gateway settings unavailable.' }));
-  return true;
 });

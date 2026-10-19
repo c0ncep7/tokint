@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { CID } from 'multiformats/cid';
-import { address, DEFAULTS, explorer, formatMetadata, imageDataUri, ipfsUrl, LatestRequest, MAX_METADATA, MAX_UINT256, parseIpfs, parseMetadata, parseQuery, readDataJson, resolveUri, settings, substituteId, tokenId } from '../src/core';
+import { address, DEFAULTS, explorer, formatMetadata, httpUrl, imageDataUri, ipfsUrl, LatestRequest, MAX_METADATA, MAX_UINT256, parseIpfs, parseMetadata, parseQuery, readDataJson, resolveUri, settings, substituteId, tokenId } from '../src/core';
 
 const DWEB = { ...DEFAULTS, gatewayUrl: 'https://dweb.link', gatewayStyle: 'subdomain' as const };
 const contract = '0x0000000000000000000000000000000000000001';
@@ -93,4 +93,20 @@ test('starting another lookup aborts the old request and invalidates its callbac
   assert.equal(first.current(), false); assert.equal(first.signal.aborted, true);
   assert.equal(second.current(), true);
   requests.cancel(); assert.equal(second.current(), false);
+});
+
+test('remote endpoints require HTTPS and HTTP accepts only literal loopback hosts', () => {
+  assert.equal(httpUrl('https://example.org/meta').href, 'https://example.org/meta');
+  for (const host of ['localhost', '127.0.0.1']) {
+    assert.equal(httpUrl(`http://${host}:8080/meta`).hostname, host);
+    assert.equal(settings({ ...DEFAULTS, rpcUrl: `http://${host}:8545`, gatewayUrl: `http://${host}:8080`, gatewayStyle: 'path' }).gatewayUrl, `http://${host}:8080`);
+    assert.equal(resolveUri(`http://${host}:8080/meta`, DEFAULTS), `http://${host}:8080/meta`);
+  }
+  for (const url of ['http://[::1]', 'http://example.org', 'http://localhost.example', 'http://localhost.', 'http://127.1', 'http://127.0.0.2', 'http://2130706433', 'http://0x7f000001', 'http://%6cocalhost', 'http://[0:0:0:0:0:0:0:1]', 'http://localhost@remote.example', 'http://user:pass@localhost', 'https://user:pass@example.org', 'http://localhost\\@remote.example']) {
+    assert.throws(() => httpUrl(url), /HTTPS/);
+    assert.throws(() => settings({ ...DEFAULTS, rpcUrl: url }), /HTTPS/);
+    assert.throws(() => resolveUri(url, DEFAULTS), /HTTPS/);
+  }
+  assert.throws(() => resolveUri('http://example.org/ipfs/' + cid, DEFAULTS), /HTTPS/);
+  assert.throws(() => resolveUri('image.svg', DEFAULTS, 'http://example.org/meta.json'), /HTTPS/);
 });

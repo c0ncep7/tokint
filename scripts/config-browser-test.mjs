@@ -1,13 +1,10 @@
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm, readFile, mkdir } from 'node:fs/promises';
-import { createHash } from 'node:crypto';
+import { mkdtemp, rm, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 await mkdir('test-results', { recursive: true });
 const profile = await mkdtemp(path.resolve('test-results/config-profile-'));
-const key = JSON.parse(await readFile('companion/manifest.json', 'utf8')).key;
-const companionId = [...createHash('sha256').update(Buffer.from(key, 'base64')).digest('hex').slice(0, 32)].map(c => String.fromCharCode(97 + parseInt(c, 16))).join('');
-const extensions = [path.resolve('extension'), path.resolve('ipfs-extension')].join(',');
+const extensions = path.resolve('extension');
 const context = await chromium.launchPersistentContext(profile, {
   executablePath: process.env.CHROMIUM_EXECUTABLE || undefined,
   channel: process.env.CHROMIUM_EXECUTABLE ? undefined : 'chromium',
@@ -18,11 +15,9 @@ let checks = 0;
 const check = text => { checks++; console.log(`PASS ${text}`); };
 try {
   const page = await context.newPage();
-  for (let i = 0; context.serviceWorkers().length < 2 && i < 100; i++) await page.waitForTimeout(100);
-  assert.equal(context.serviceWorkers().length, 2);
-  const companion = context.serviceWorkers().find(w => new URL(w.url()).host === companionId);
-  const main = context.serviceWorkers().find(w => new URL(w.url()).host !== companionId);
-  assert.ok(companion && main);
+  const invalidCsp = [];
+  page.on('console', message => { if (/invalid source/i.test(message.text())) invalidCsp.push(message.text()); });
+  const main = context.serviceWorkers()[0] ?? await context.waitForEvent('serviceworker');
   const mainId = new URL(main.url()).host;
   const options = `chrome-extension://${mainId}/options.html`;
   await page.goto(options);
@@ -50,6 +45,17 @@ try {
   await page.reload();
   await page.waitForFunction(() => document.querySelector('#rpc-preset').value === 'alchemy');
   assert.equal(await page.locator('#rpc-url').inputValue(), 'https://eth-mainnet.g.alchemy.com/v2/test-fixture');
+  async function verifyPrivacyLink(link) {
+    assert.equal(await link.getAttribute('href'), 'privacy.html');
+    const opened = context.waitForEvent('page');
+    await link.click();
+    const policy = await opened;
+    await policy.waitForLoadState();
+    assert.equal(policy.url(), `chrome-extension://${mainId}/privacy.html`);
+    assert.match(await policy.locator('h1').textContent(), /privacy policy/i);
+    await policy.close();
+  }
+  await verifyPrivacyLink(page.getByRole('link', { name: 'Privacy policy', exact: true }));
   await page.screenshot({ path: 'test-results/rpc-settings.png', fullPage: true });
   check('optional Alchemy endpoint persists and placeholder URLs are rejected');
   await page.locator('#rpc-preset').selectOption('custom');
@@ -60,20 +66,18 @@ try {
   await page.waitForFunction(() => document.querySelector('#rpc-preset').value === 'custom');
   assert.equal(await page.locator('#rpc-url').inputValue(), 'https://custom.example/rpc');
   check('custom endpoints remain editable and survive reload');
-  const newPage = context.waitForEvent('page');
-  await page.locator('#connect-ipfs').click();
-  const connection = await newPage;
-  await connection.waitForLoadState();
-  assert.equal(new URL(connection.url()).host, companionId);
-  await connection.waitForFunction(id => document.querySelector('#main-extension').value === id, mainId);
-  await connection.getByRole('button', { name: 'Connect', exact: true }).click();
-  await connection.waitForFunction(() => document.querySelector('#connection-status').textContent.startsWith('Connected.'));
-  const reply = await companion.evaluate(id => chrome.runtime.sendMessage(id, { type: 'tokint-gateway' }), mainId);
-  assert.deepEqual(Object.keys(reply).sort(), ['gatewayStyle', 'gatewayUrl', 'type', 'version']);
-  check('companion pairs through the Settings button and receives gateway-only configuration');
+  await page.locator('#rpc-url').fill('http://remote.example/rpc');
+  await page.getByRole('button', { name: 'Save settings' }).click();
+  await page.waitForFunction(() => document.querySelector('#settings-status').textContent.startsWith('Use HTTPS'));
+  await page.locator('#rpc-url').fill('http://127.0.0.1:8545');
+  await page.getByRole('button', { name: 'Save settings' }).click();
+  await page.waitForFunction(() => document.querySelector('#settings-status').textContent.startsWith('Saved.'));
+  await page.reload();
+  await page.waitForFunction(() => document.querySelector('#rpc-url').value === 'http://127.0.0.1:8545/');
+  check('settings reject remote HTTP and accept a literal loopback endpoint');
   const cid = 'QmYwAPJzv5CZsnAzt8auVTLnEKjHhhtvE4s1wKpR1X4M8F';
   const input = `${cid}/nested/art%20work.svg?download=1#frame`;
-  const resolve = text => connection.evaluate(async text => (await import(chrome.runtime.getURL('ipfs-background.js'))).destination(text), text);
+  const resolve = text => page.evaluate(async text => (await import(chrome.runtime.getURL('background.js'))).destination(text), text);
   const first = await resolve(input);
   assert.match(first, /^https:\/\/gateway.pinata.cloud\/ipfs\//);
   assert.ok(first.endsWith('/nested/art%20work.svg?download=1#frame'));
@@ -85,11 +89,9 @@ try {
   assert.equal(await resolve(first), second);
   check('IPFS resolution follows changed gateway settings immediately and preserves nested paths');
   const invalid = await resolve('javascript:alert(1)');
-  assert.equal(new URL(invalid).host, companionId);
+  assert.equal(new URL(invalid).host, mainId);
   assert.ok(new URLSearchParams(new URL(invalid).hash.slice(1)).has('error'));
-  await companion.evaluate(() => chrome.storage.local.remove('mainExtensionId'));
-  assert.match(await resolve(cid), /options.html#error=/);
-  check('invalid inputs and missing connection open actionable local errors');
+  check('invalid inputs open local errors');
   await page.goto(`chrome-extension://${mainId}/results.html`);
   assert.equal(await page.locator('label[for="raw-uri"]').textContent(), 'Metadata endpoint');
   assert.equal(await page.locator('label[for="resolved-uri"]').textContent(), 'Metadata URL');
@@ -104,6 +106,10 @@ try {
   await explorer.waitForLoadState();
   assert.equal(explorer.url(), 'https://etherscan.io/address/0x0000000000000000000000000000000000000001#readContract');
   check('metadata labels and accessible inline icons replace large link buttons; Etherscan opens the typed contract');
+  await page.getByRole('button', { name: 'Help', exact: true }).click();
+  await verifyPrivacyLink(page.getByRole('link', { name: 'Read the privacy policy' }));
+  assert.deepEqual(invalidCsp, []);
+  check('Settings and Help open the bundled privacy policy; CSP contains no ignored invalid sources');
   console.log(`${checks} configuration/browser checks passed.`);
 } finally {
   await context.close();

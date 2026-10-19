@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TOKINT Privacy Policy</title>
+</head>
+<body>
+<main>
+  <h1>TOKINT Privacy Policy</h1>
+  <p>Effective date: October 18, 2026</p>
+  <p>TOKINT is a browser extension for inspecting Ethereum NFT metadata and artwork, resolving IPFS references, and downloading or converting associated media. This policy covers the extension distributed by the publisher identified on its Chrome Web Store listing.</p>
+
+  <h2>Data used to provide the features you request</h2>
+  <p>TOKINT processes the contract addresses, token IDs, public wallet addresses, IPFS references, and settings you enter. When you click the toolbar button, it reads the active tab's URL to identify a token. It does not continuously monitor your browsing or read your browser history. Address-bar suggestions are generated locally without network requests.</p>
+  <p>After submission, lookups contact your configured Ethereum RPC provider and IPFS gateway, and the metadata or media hosts referenced by the token. Defaults are PublicNode and Pinata; Arweave gateway resources are also supported. These services receive your IP address and ordinary connection information, together with the request details needed for the lookup, such as a contract address, token ID, CID, or resource path. A public wallet address may identify a person when combined with other information.</p>
+  <p>If you configure Alchemy, TOKINT uses your endpoint, including its API key, for requested RPC and NFT API calls. Collection and wallet browsing, ownership, and mint information are obtained from Alchemy. Optional thumbnails are fetched from Alchemy's CDN or its Cloudinary resources after permission is granted. TOKINT does not connect a wallet, request private keys or recovery phrases, sign transactions, or process payments.</p>
+  <p>TOKINT has no developer-operated data collection server, analytics, advertising, or telemetry. Lookup data is sent directly to the relevant providers, not to the TOKINT publisher. Providers may log requests and retain data under their own policies; TOKINT cannot delete those logs. Choosing an endpoint does not make your queries anonymous.</p>
+
+  <h2>Local storage and retention</h2>
+  <p>The extension stores RPC and gateway settings, the last entered contract, and your theme in the browser profile. A configured API key remains part of the saved endpoint until you replace it or remove the extension. TOKINT does not add encryption to browser storage and does not use Chrome Storage Sync.</p>
+  <p>Recent-token history is limited to 30 distinct tokens. Metadata and successfully decoded preview originals are cached locally in IndexedDB within a 50 MiB payload budget. Cached snapshots are eligible for reuse for 24 hours; expiration does not guarantee immediate physical deletion. Cache maintenance removes expired or excess snapshots as entries are written. Recent shortcuts may remain after their cached content is removed. Download-only media and Alchemy browsing results are not added to this token cache.</p>
+  <p>The trash control clears recent tokens and cached files. It does not clear settings or the last entered contract. You can change settings in Settings; removing the extension removes its browser-managed local storage. Inspector URLs can include contract, token, method, or error information and may remain in browser-managed history. Files you download and data you explicitly copy to the clipboard are managed by your browser or operating system and are not removed by clearing TOKINT's cache or uninstalling it.</p>
+
+  <h2>Media processing and connections</h2>
+  <p>Image and animation conversion runs on your device; TOKINT does not upload media to a conversion service. HTML artwork may execute scripts only inside an isolated sandbox without extension APIs or external network access. RPC, metadata, media, and thumbnail fetches omit cookies and referrers and reject redirects. Remote fetches require HTTPS. Plain HTTP is supported only for explicitly configured or permitted services on localhost or 127.0.0.1.</p>
+  <p>Opening Etherscan, a marketplace, a source link, or an IPFS address-bar destination navigates to an ordinary website. That website can receive normal browser requests and use cookies under its own policy. This is different from the extension's restricted background fetches.</p>
+
+  <h2>Permissions and your choices</h2>
+  <p>Storage permission saves preferences. Temporary active-tab access supports the toolbar lookup you initiate. Required host permissions cover default lookup services. Optional host access is requested for additional providers and token resources when you choose to allow them. You can decline these requests, change providers in Settings, revoke optional site access through your browser's extension controls, clear the token cache, or uninstall TOKINT.</p>
+
+  <h2>Limited use</h2>
+  <p>TOKINT uses the data described here only to provide its disclosed inspection, browsing, caching, downloading, and conversion features. It does not sell user data, use it for advertising or unrelated profiling, or use it to determine creditworthiness or for lending. Data is transferred only as needed for the features you request. The publisher does not receive or have remote access to your locally stored data through the extension.</p>
+
+  <h2>Contact and changes</h2>
+  <p>For privacy questions, use the publisher's support contact on TOKINT's Chrome Web Store listing. If you contact support, the publisher receives whatever information you choose to provide; do not include private keys, recovery phrases, or API keys.</p>
+  <p>Changes to this policy will be published with an updated effective date. Material changes to data handling will be disclosed in the extension before the new handling begins.</p>
+</main>
+</body>
+</html>
