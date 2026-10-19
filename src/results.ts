@@ -112,7 +112,7 @@ function link(id: string, url?: string) {
   else { anchor.removeAttribute('href'); anchor.hidden = true; }
 }
 function status(message: string, state = 'ready') { el('status').textContent = message; el('status-row').dataset.state = state; setBusy(el('status'), state === 'loading'); }
-function imageNote(text: string, loading = false) { setBusy(el('image-placeholder'), loading); mediaModal.reset(); el('image-placeholder').hidden = false; el('image-note').textContent = text; image.hidden = true; }
+function imageNote(text: string, loading = false) { el('media-size').textContent = ''; setBusy(el('image-placeholder'), loading); mediaModal.reset(); el('image-placeholder').hidden = false; el('image-note').textContent = text; image.hidden = true; }
 function resetMedia() {
   mediaRequests.cancel();
   shareModal.reset(); mediaModal.reset();
@@ -235,6 +235,7 @@ async function preview(url: string, ticket: Ticket, cachedImage?: Blob, cache?: 
       shareModal.setBlob(url, blob, html.width, html.height);
       el('media-caption').textContent = html.capture ? `${html.width} × ${html.height} canvas` : 'HTML artwork';
       el('media-type').textContent = 'HTML';
+      el('media-size').textContent = `${Number((blob.size / 1_000_000).toFixed(2))} MB`;
       if (cache && !cachedImage) void rememberImage(cache.key, cache.snapshot, { url, blob }, cache.epoch).then(cacheChanged);
       status(''); return;
     }
@@ -254,6 +255,7 @@ async function preview(url: string, ticket: Ticket, cachedImage?: Blob, cache?: 
       shareModal.setBlob(url, blob, width, height);
       el('media-caption').textContent = width && height ? `${width} × ${height}${extension === 'svg' ? '' : ' pixels'}` : 'SVG image';
       el('media-type').textContent = extension === 'jpg' ? 'JPEG' : extension.toUpperCase();
+      el('media-size').textContent = `${Number((blob.size / 1_000_000).toFixed(2))} MB`;
       status('');
     };
     image.onerror = () => failure(new Failure('image', 'The browser could not decode this image.'), () => preview(url, ticket, undefined, cache), ticket, true);
