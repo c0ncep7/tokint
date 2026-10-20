@@ -12,8 +12,10 @@ icons, and legal/privacy files. The other binary ZIP is for manual installation.
 There is one extension and one keyword, `tokint`; no companion or extension-ID
 pairing is required. Version changes must update package, lockfile, and manifest.
 
-The current checkout includes the Art Blocks redirect fix and six-character
-passphrase minimum added after the recorded 1.0.1 publication. Regenerate and
+The current checkout includes the Art Blocks redirect and animation fixes,
+animation-first media selection, on-demand dependency loading, click-to-start
+export, and six-character passphrase minimum added
+after the recorded 1.0.1 publication. Regenerate and
 publish matching binary/source archives, checksums, and the public policy before
 using these updated reviewer instructions for a submission. Existing published
 archive links below identify the earlier build; see [verification](../VERIFICATION.md).
@@ -32,7 +34,7 @@ convert associated media locally.
 | `https://ethereum-rpc.publicnode.com/*` | Default Ethereum mainnet RPC for read-only contract/interface and metadata-URI calls. |
 | `https://gateway.pinata.cloud/*` | Default IPFS gateway for metadata and media referenced by the user's lookup. |
 | `https://*.arweave.net/*` | Retrieves NFT metadata/media hosted on Arweave. Transaction URLs are resolved directly to their deterministic sandbox subdomains, with destination host permission checked before fetching. |
-| Optional `https://*/*` | NFTs can reference arbitrary HTTPS metadata/media hosts, and users can select custom RPC or IPFS providers. The extension requests the specific host needed after an explicit user action; the wildcard is not granted wholesale. Supported Art Blocks legacy routes check access to `token.artblocks.io` for metadata and `artblocks-mainnet.s3.amazonaws.com` for PNG artwork. Optional Alchemy thumbnails request its two documented CDN hosts. |
+| Optional `https://*/*` | NFTs can reference arbitrary HTTPS metadata/media hosts, and users can select custom RPC or IPFS providers. The extension requests the specific host needed after an explicit user action; the wildcard is not granted wholesale. Supported Art Blocks legacy routes check access to `token.artblocks.io` for metadata, `generator.artblocks.io` for HTML artwork, and `artblocks-mainnet.s3.amazonaws.com` for PNG artwork. The supported p5.js artwork dependency requests optional `cdnjs.cloudflare.com` access, fetches only its pinned version and verifies its SHA-256 hash. Optional Alchemy thumbnails request its two documented CDN hosts. |
 | Optional HTTP loopback hosts | Allows the user to select a local RPC or IPFS service on `localhost` or `127.0.0.1`. No arbitrary remote HTTP or LAN host access is requested. |
 
 ## Remote code declaration
@@ -43,10 +45,17 @@ artwork with inline scripts. That artwork executes only within the declared
 `html-media.html` sandbox, isolated from extension APIs and from the network.
 It cannot supply extension logic or obtain host permissions. The packaged bridge
 exchanges bounded artwork/canvas data for preview and local GIF/WebP export.
-External scripts, frames, workers, forms, and popups are blocked. This is the
-isolated-context case described in the [Manifest V3 policy](https://developer.chrome.com/docs/webstore/program-policies/mv3-requirements).
-Reviewers can inspect `src/html-media.ts`, `src/html-media-sandbox.ts`, and the
-manifest CSP. This exemption remains subject to Google's review.
+External scripts, frames, workers, forms, and popups are blocked. The exact
+p5.js 1.0.0 CDN reference used by legacy Art Blocks generators is fetched as bytes
+by the extension after optional CDN access is granted. Its pinned SHA-256 hash is
+verified before its code is passed into the sandbox. It is cached separately as
+public library bytes, with integrity rechecked on reuse. No dependency code runs
+in an extension context. Unknown external scripts produce an actionable error.
+The sandbox has no direct network access or additional permissions.
+This is the isolated-context case described in the [Manifest V3 policy](https://developer.chrome.com/docs/webstore/program-policies/mv3-requirements).
+Reviewers can inspect `src/html-dependencies.ts`, `src/html-media.ts`,
+`src/html-media-sandbox.ts`, and the manifest CSP. This exemption remains subject
+to Google's review.
 
 ## Data-use declarations
 
@@ -125,10 +134,17 @@ The automated browser fixtures cover sandboxed HTML and local converters without
 requiring a live token to remain unchanged. See [verification](../VERIFICATION.md).
 
 For the Art Blocks regression, inspect
-`0x059edd72cd353df5106d2b9cc5ab83a52287ac3a 5603`. Allow the metadata and artwork
-destination hosts when prompted. The inspector preserves the legacy metadata URI
-and shows the direct metadata URL; the image preview loads from the direct storage
-host. HTTP redirect following remains disabled. Other Art Blocks contracts and
+`0x059edd72cd353df5106d2b9cc5ab83a52287ac3a 5603`. Allow the metadata and animation
+destination hosts when prompted. `animation_url` is selected by default; the
+generator HTML renders with p5.js fetched on demand. Allow `cdnjs.cloudflare.com`
+when prompted; subsequent previews and exports reuse its verified local cache.
+Click the artwork to toggle its animation. In Download/Convert, enable
+**Click artwork before recording** and export GIF or WebP; verify the downloaded
+frames change. The option starts off to preserve other artworks' behavior.
+Switch Media source to `image` to load the PNG from the direct storage host,
+granting its optional host access if needed. The inspector preserves the legacy
+metadata URI and shows the direct metadata URL.
+HTTP redirect following remains disabled. Other Art Blocks contracts and
 cross-token metadata references are outside this compatibility mapping.
 
 ## Published supporting pages and source

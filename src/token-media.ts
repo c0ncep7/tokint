@@ -1,8 +1,8 @@
 export type TokenMedia = { field: string; uri: string };
 
-// Keep image first for the existing default preview. A field's name does not
+// Prefer animation_url when present, with image as the first fallback. A field's name does not
 // determine its format: animation_url can contain GIF, WebP, SVG, or other media.
-const fields = ['image', 'image_url', 'imageUrl', 'image_data', 'animation_url', 'animationUrl', 'animation', 'video', 'video_url', 'audio', 'audio_url', 'media', 'content'];
+const fields = ['animation_url', 'image', 'image_url', 'imageUrl', 'image_data', 'animationUrl', 'animation', 'video', 'video_url', 'audio', 'audio_url', 'media', 'content'];
 
 export function tokenMedia(metadata: Record<string, unknown>): TokenMedia[] {
   const result: TokenMedia[] = [];

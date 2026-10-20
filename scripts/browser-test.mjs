@@ -78,7 +78,6 @@ try {
         name: is1155 ? 'Edition 171' : `Verdant Geometry #${id}`,
         description: 'A deterministic browser-test fixture. Lines, light, and a little Ethereum. This is sample artwork, not a live NFT.',
         image: is1155 ? '../media/{id}.svg' : `../media/${id}.svg`,
-        animation_url: 'https://example.com/art',
         unsafe: '<img src=x onerror=window.metadataExecuted=true>', enabled: true, score: 1.25, missing: null,
         attributes: [{ trait_type: 'Palette', value: 'Forest' }, { trait_type: 'Geometry', value: 'Diamond' }, { trait_type: 'Edition', value: id }],
       } });

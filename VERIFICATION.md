@@ -3,6 +3,51 @@
 Updated: 2026-10-20 for version **1.0.1**. These are implementation and test
 results, not Chrome Web Store approval. Earlier dated results remain below as history.
 
+## Art Blocks animation, on-demand dependencies and export: 2026-10-20
+
+- Token 5603's `animation_url` references p5.js 1.0.0 on cdnjs. TOKINT now
+  downloads only that exact allowlisted dependency after optional CDN access is
+  granted, verifies its pinned SHA-256 hash, and passes its bytes into the opaque
+  artwork sandbox. The sandbox has no direct network or extension API access;
+  its CSP and manifest host grants are unchanged. Unknown scripts fail clearly.
+- Verified library bytes are cached separately for offline reuse, with integrity
+  checked on every read. The cache contains only public library code, not artwork,
+  token identifiers or preferences. Downloads are limited to 1 MiB and 15 seconds,
+  omit cookies/referrers, and reject redirects. Tests cover missing access,
+  altered/oversized/redirected responses, cache corruption, unavailable storage,
+  cancellation and offline reuse.
+- p5 is excluded from the extension build and its dependency notices. Its npm
+  package is development-only for fixtures; the earlier vendored p5 source and
+  runtime have been removed. The current unpacked extension is about **1.11 MiB**.
+- `animation_url` remains the first media selection when it has a reference;
+  image fields remain selectable. Original HTML bytes are unchanged. Unsupported
+  dependencies and startup exceptions report useful errors instead of a blank
+  successful preview.
+- **Click artwork before recording** defaults off and appears only for HTML.
+  When enabled, it sends one canvas-center click in each fresh export instance,
+  including compression retries. Preview interaction is independent. The exporter
+  allows the first draw to finish before sampling, avoiding a blank initial frame.
+  Responsive HTML initialization waits for a nonzero iframe viewport, fixing a
+  fullscreen race exposed by the live artwork.
+- `npm run check` passed strict TypeScript, **147 unit tests**, and the production
+  build. The complete `npm run test:browser` sequence passed: inspector (44),
+  Art Blocks, media/HTML, sharing (48), cache (15), and Alchemy (15). The separate
+  real-server security suite passed. After the final viewport guard, the units,
+  responsive Art Blocks fixture, live Art Blocks check and media/HTML suite were
+  rerun successfully. These used disposable Chrome for Testing **153.0.8010.12**
+  profiles; the full release suite was not rerun for this follow-up.
+- The live **Chromie Squiggle #5603** check used one CDN fetch for preview, both
+  exports, offline reload and fullscreen. It verified the extension context has
+  no p5 global, sandbox scripts have no extension APIs, and the PNG still loads.
+  Decoded **96 × 64**, **0.5-second**, **10 fps** GIF frames are identical with the
+  click option off and change with it on. This checks actual artwork motion,
+  rather than relying on an automatically animating fixture or a blank first frame.
+  The exported GIF and screenshot are under `test-results/`; the screenshot was
+  inspected.
+- README, Help, privacy policy, distribution notes and store reviewer instructions
+  reflect the final behavior. The unpacked build is updated; published archives
+  and the hosted policy have not been republished.
+
 ## Passphrase minimum and documentation: 2026-10-20
 
 - Creation and unlock accept **6–1024 characters**. Empty and whitespace-only
@@ -179,16 +224,18 @@ byte/pixel/frame/time bounds. SVG stays inert as image content, and HTML artwork
 runs in an opaque sandbox without extension APIs or external network access.
 
 That cleanup passed all then-current automated browser checks and 125 units.
-Its online npm registry audit reported zero known vulnerabilities. This release
-preparation changes no dependency versions; that audit is not a guarantee against
-unknown vulnerabilities or a substitute for a fresh audit at publication time.
+Its online npm registry audit reported zero known vulnerabilities. That earlier
+audit predates the on-demand p5.js artwork support. It is not a guarantee against unknown
+vulnerabilities or a substitute for a fresh audit at publication time.
 
 ## Publication status and remaining publisher actions
 
 Privacy hosting: https://c0ncep7.github.io/tokint/public/privacy.html.
 Release/source distribution: https://github.com/c0ncep7/tokint/releases/tag/v1.0.1.
-These links refer to the earlier publication, before the Art Blocks and
-passphrase follow-ups. The archive hashes and full release checks recorded for
+These links refer to the earlier publication, before the Art Blocks redirect and
+animation fixes, animation-first selection, on-demand dependency loading,
+click-to-start export, and passphrase follow-ups.
+The archive hashes and full release checks recorded for
 that publication do not describe the current working tree.
 
 - Run the full release checks for the source being published, regenerate the

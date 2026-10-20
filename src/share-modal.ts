@@ -26,6 +26,7 @@ export function createShareModal() {
   const format = el<HTMLSelectElement>('share-format');
   const fps = el<HTMLSelectElement>('share-fps');
   const svgDuration = el<HTMLInputElement>('share-svg-duration');
+  const htmlClick = el<HTMLInputElement>('share-html-click');
   let source: Source | undefined;
   let capabilities: ConversionCapabilities | undefined;
   let capabilityError = '';
@@ -140,6 +141,8 @@ export function createShareModal() {
     el('share-format-label').hidden = !animated;
     svgDuration.disabled = !source?.svg?.animated && !source?.html;
     el('share-svg-duration-label').hidden = svgDuration.disabled;
+    htmlClick.disabled = !source?.html;
+    el('share-html-click-control').hidden = htmlClick.disabled;
     fps.options[0].textContent = source?.svg || source?.html ? '20 fps' : 'Original';
     const gif = !!capabilities?.canvas && !!capabilities?.wasm;
     const webp = !!capabilities?.canvas && !!capabilities?.webp;
@@ -247,6 +250,7 @@ export function createShareModal() {
     stop(); clearOutput();
     const run = generation;
     const current = source;
+    const clickBeforeRecording = htmlClick.checked;
     const options: ShareOptions = {
       target: 'web', maxEdge: Number(edge.value === 'custom' ? customEdge.value : edge.value),
       format: format.value as ShareOptions['format'],
@@ -288,7 +292,7 @@ export function createShareModal() {
       if (extension === 'html') {
         current.html = true; current.frames = 2;
         htmlHost = document.createElement('div'); htmlHost.className = 'html-export-stage'; document.body.append(htmlHost);
-        html = await createHtmlMedia(blob, htmlHost, signal, true);
+        html = await createHtmlMedia(blob, htmlHost, signal, true, clickBeforeRecording);
         if (!active()) { html.dispose(); return; }
         htmlExport = html;
         if (!html.capture) throw new Error('This HTML artwork has no canvas to export. The original HTML download is available.');
@@ -326,7 +330,7 @@ export function createShareModal() {
           if (!active()) return;
           if (html && pass) {
             html.dispose();
-            html = await createHtmlMedia(blob, htmlHost!, signal, true);
+            html = await createHtmlMedia(blob, htmlHost!, signal, true, clickBeforeRecording);
             if (!active()) { html.dispose(); return; }
             htmlExport = html;
           }
@@ -381,7 +385,7 @@ export function createShareModal() {
   });
   return {
     setSource(url: string, identity: { contract: string; id: bigint; title: string }) {
-      source = { url, ...identity }; permissionOrigin = undefined; open.hidden = false; updateControls();
+      source = { url, ...identity }; htmlClick.checked = false; permissionOrigin = undefined; open.hidden = false; updateControls();
     },
     setBlob(url: string, blob: Blob, width?: number, height?: number) {
       if (source?.url === url) { source.blob = blob; void originalReady(source, blob); source.width = width; source.height = height; if (dialog.open) { sourceLabel(); updateControls(); } void inspectSource(); }

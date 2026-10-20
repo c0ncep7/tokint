@@ -16,21 +16,30 @@ and permission justifications. Keep the public policy, bundled policy, listing,
 and dashboard declarations consistent when changing functionality. Publishing
 the policy and configuring the listing are separate from building the extension.
 
-Version 1.0.1 adds passphrase-based encryption for persistent extension data.
+Version 1.0.1 adds passphrase-based encryption for persistent user data.
 The current build accepts 6–1024 characters for creation and unlock, rejects
 empty or whitespace-only input, and requires confirmation when creating a vault.
 Existing vaults still require their original passphrase. The passphrase is not
 stored or transmitted. Derived keys use memory-only Chrome session storage;
-disk records contain ciphertext, nonces and non-secret KDF metadata. Browser
+vault records contain ciphertext, nonces and non-secret KDF metadata. Browser
 history, downloads and clipboard contents remain outside the vault.
 
 Known Arweave transaction and original Art Blocks metadata/PNG routes resolve to
 direct content destinations before fetching. Destination host permission is
 checked first; arbitrary HTTP redirects remain blocked. Art Blocks metadata at
 `token.artblocks.io` and artwork at `artblocks-mainnet.s3.amazonaws.com` use
-optional host access.
+optional host access. HTML animations at `generator.artblocks.io` also require
+optional host access. When present, `animation_url` is the initial media selection.
+When artwork needs the supported p5.js 1.0.0 dependency, TOKINT requests optional
+access to `cdnjs.cloudflare.com`, downloads that exact file without cookies or
+referrers, and verifies its SHA-256 hash before passing its bytes into the isolated
+sandbox. A separate local cache holds only this public library and verifies it
+again on reuse. This public-library cache is unencrypted; no artwork, token
+identifiers or preferences go into it.
+The sandbox itself still has no network access. The CDN receives the library
+request and connection information described in the policy.
 
-The six-character minimum and Art Blocks routing updates postdate the recorded
+The passphrase, Art Blocks, on-demand dependency and export updates postdate the recorded
 1.0.1 publication. Updating this checkout and rebuilding the bundled policy does
 not deploy the public policy or replace published release archives. Publish
 the matching policy and release together; see [VERIFICATION.md](VERIFICATION.md).

@@ -5,10 +5,14 @@ import { embeddedMediaBlob } from '../src/downloads';
 import { DEFAULTS, imageDataUri, readDataJson, resolveUri } from '../src/core';
 import { readFile } from 'node:fs/promises';
 
-test('distinct media stays selectable with image as the default and shared URLs deduplicated', () => {
+test('animation_url is the default and distinct images stay selectable with shared URLs deduplicated', () => {
   assert.deepEqual(tokenMedia({ animation_url: 'art.gif', image: ' art.png ', image_url: 'art.png', external_url: 'https://example.com', name: 'Token' }), [
-    { field: 'image', uri: 'art.png' }, { field: 'animation_url', uri: 'art.gif' },
+    { field: 'animation_url', uri: 'art.gif' }, { field: 'image', uri: 'art.png' },
   ]);
+  assert.deepEqual(tokenMedia({ image: 'art.png', animation_url: 'art.png' }), [{ field: 'animation_url', uri: 'art.png' }]);
+  for (const animation_url of [undefined, null, '', ' ', 42, {}]) {
+    assert.deepEqual(tokenMedia({ image: 'art.png', animation_url }), [{ field: 'image', uri: 'art.png' }]);
+  }
 });
 test('inline SVG is available alongside image and preserves its markup', async () => {
   const svg = '<?xml version="1.0"?><svg xmlns="http://www.w3.org/2000/svg"><text>Café</text></svg>';
@@ -37,8 +41,8 @@ test('base64 token metadata retains both embedded image and animation bytes', as
   };
   const tokenUri = `data:application/json;base64,${Buffer.from(JSON.stringify(metadata)).toString('base64')}`;
   const media = tokenMedia(readDataJson(tokenUri));
-  assert.deepEqual(media.map(item => item.field), ['image', 'animation_url']);
-  for (const [index, original] of [still, animation].entries()) {
+  assert.deepEqual(media.map(item => item.field), ['animation_url', 'image']);
+  for (const [index, original] of [animation, still].entries()) {
     const uri = resolveUri(media[index].uri, DEFAULTS, tokenUri);
     assert.equal(imageDataUri(uri), true);
     assert.deepEqual(Buffer.from(await embeddedMediaBlob(uri).arrayBuffer()), original);
