@@ -14,7 +14,7 @@ pairing is required. Version changes must update package, lockfile, and manifest
 
 The current checkout includes the Art Blocks redirect and animation fixes,
 animation-first media selection, on-demand dependency loading, click-to-start
-export, and six-character passphrase minimum added
+export, and optional RPC persistence added
 after the recorded 1.0.1 publication. Regenerate and
 publish matching binary/source archives, checksums, and the public policy before
 using these updated reviewer instructions for a submission. Existing published
@@ -29,7 +29,7 @@ convert associated media locally.
 
 | Permission | Dashboard explanation |
 | --- | --- |
-| `storage` | Saves AES-256-GCM encrypted RPC/gateway preferences, last contract and theme locally. Recent-token metadata/media are encrypted in IndexedDB. Unlock keys exist only in trusted-context Chrome session storage and clear on lock or full browser exit. No developer-server sync. |
+| `storage` | Saves ordinary preferences, last contract, theme, and recent-token metadata/media locally without encryption. Alchemy/custom RPC URLs default to trusted-context session storage and clear on browser restart or extension reload. Remember on this device explicitly persists the URL and any key locally without encryption. No Chrome Sync or developer-server sync. |
 | `activeTab` | Reads the current tab URL only when the user invokes the toolbar action, to extract an Ethereum contract and token ID and open the inspector. No continuous browsing monitoring or page-content injection. |
 | `https://ethereum-rpc.publicnode.com/*` | Default Ethereum mainnet RPC for read-only contract/interface and metadata-URI calls. |
 | `https://gateway.pinata.cloud/*` | Default IPFS gateway for metadata and media referenced by the user's lookup. |
@@ -68,7 +68,7 @@ of public wallet/account identifiers; TOKINT never accesses payment credentials.
 | --- | --- |
 | Personally identifiable information | User-entered public wallet/account addresses can identify a person. Providers also receive the network IP address needed to answer a request. No name/email form or developer account system. |
 | Financial and payment information | Public wallet/NFT ownership and mint information requested for inspection. No bank details, card details, payment processing, private keys, or signing. |
-| Authentication information | A user-created vault passphrase is processed locally, never saved or transmitted. Optional Alchemy API keys or authentication-bearing endpoints are encrypted locally and sent only to the configured provider when requested. |
+| Authentication information | Optional Alchemy keys and custom RPC URLs stay in memory by default, or persist locally without encryption with explicit Remember on this device consent. They are sent only to the configured provider when requested. |
 | Location | IP address visible to providers as connection metadata only. No geolocation permission, GPS, or location inference by TOKINT. |
 | Web history | Active tab URL read on toolbar activation and resource URLs requested for the user's token/IPFS lookup. No browser-history API or background browsing surveillance. |
 | User activity | Explicit lookup inputs and recent-token selections retained locally for the feature. No clickstream analytics, mouse tracking, or keystroke monitoring. |
@@ -101,18 +101,17 @@ Choose your RPC and IPFS gateway in Settings. Optional Alchemy support adds
 collection/wallet browsing and ownership information. No wallet connection or
 account is required for core features. Lookups go directly to providers, which
 receive the requested identifiers and your IP address. Recent tokens and cached
-media stay encrypted in your browser profile and can be cleared. Create and
-confirm a local unlock passphrase of 6–1024 characters at first use; unlock again
-after quitting Chrome completely. No passphrase recovery is available. See the privacy policy
-for permissions, local storage, and provider disclosures.
+media stay locally in your browser profile without encryption and can be cleared.
+Alchemy/custom RPC URLs are session-only by default. Remember on this device
+optionally saves the complete URL and any key locally without encryption. No
+passphrase is required. See the privacy policy for
+permissions, local storage, and provider disclosures.
 
 ## Reviewer instructions
 
-1. Install the single extension. At first use, create and confirm a disposable
-   local passphrase of 6–1024 characters. Five characters and whitespace-only
-   input are rejected; a six-character passphrase can create and unlock the vault.
-   No account, publisher credentials,
-   or provider API key is required for the core path. Open Settings and inspect
+1. Install the single extension. New installations open immediately without a
+   passphrase. No account, publisher credentials, or provider API key is required
+   for the core path. Open Settings and inspect
    the default PublicNode RPC and Pinata gateway.
 2. Type `tokint`, press Tab, and enter
    `0xff9c1b15b16263c61d017ee9f65c50e4ae0113d7 1` to request Loot #1.
@@ -123,10 +122,13 @@ for permissions, local storage, and provider disclosures.
    it opens through the configured gateway. Suggestions are computed locally.
 5. Additional resource hosts show an allow/retry control. Denial leaves an
    actionable error. Remote HTTP endpoints are rejected; loopback HTTP is supported.
-6. In Settings, click **Lock saved data**, then unlock with your passphrase.
-   Quit Chrome completely and reopen it: TOKINT must ask for the passphrase again
-   and restore saved settings/recents after unlocking. Wrong passphrases are rejected.
-   Existing vaults keep their original passphrase when the extension is updated.
+6. In Settings, select Alchemy or a custom RPC. Remember on this device defaults
+   off. Save a disposable endpoint and restart Chrome: the URL must be absent,
+   and lookups must request configuration without silently using a fallback RPC.
+   Repeat with Remember enabled: the URL persists and is disclosed as unencrypted.
+   Uncheck it and save to remove the persistent copy. Old encrypted preferences
+   and the previous token cache are discarded on update. No passphrase or
+   migration prompt is shown; custom settings must be re-entered.
 7. Alchemy features require the reviewer's own optional endpoint. Do not include
    a publisher API key in review notes or the uploaded package.
 
@@ -154,10 +156,10 @@ cross-token metadata references are outside this compatibility mapping.
 - Earlier published 1.0.1 source: https://github.com/c0ncep7/tokint/releases/download/v1.0.1/tokint-1.0.1-source.zip
 - Earlier release and checksums: https://github.com/c0ncep7/tokint/releases/tag/v1.0.1
 
-The vault addresses the earlier unencrypted-storage finding. See `src/vault-crypto.ts`,
-`src/vault.ts`, `src/token-cache.ts`, and the migration/restart tests. Browser history,
-downloads and clipboard contents remain outside the vault, as disclosed in the policy.
-These implementation checks are not a claim of Google approval.
+The current build replaces the vault with session-only RPC configuration and
+explicit persistence consent. Inspect `src/storage.ts`, `src/token-cache.ts`,
+and the storage reset/restart tests. Persistent settings,
+cache, and opted-in RPC URLs are not encrypted; the policy discloses this.
 
 ## Final dashboard steps
 

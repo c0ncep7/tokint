@@ -3,6 +3,30 @@
 Updated: 2026-10-20 for version **1.0.1**. These are implementation and test
 results, not Chrome Web Store approval. Earlier dated results remain below as history.
 
+## Optional RPC persistence and vault retirement: 2026-10-20
+
+- New installations open immediately without a passphrase. Preferences, recent
+  tokens, metadata and cached artwork use ordinary local storage. The vault,
+  decryption code, migration dialog, and their obsolete tests have been removed.
+- Alchemy and every custom RPC URL default to trusted-context session storage.
+  Public presets remain persistent. **Remember on this device** explicitly saves
+  the complete RPC URL and any API key locally without encryption. Its warning
+  explains that anyone with access to the browser profile may be able to read it.
+  Unchecking it and saving removes the persistent copy. Expired session URLs
+  produce configuration guidance without sending a lookup to a fallback provider.
+- Old encrypted preferences and the previous token cache are discarded. There is
+  no passphrase prompt or migration. Custom settings must be re-entered and token
+  lookups rebuild the cache. New settings and cache entries survive later restarts.
+- `npm run check` passed strict TypeScript, **149 unit tests**, and the build.
+  All standard browser suites passed: inspector, Art Blocks, media/HTML, sharing,
+  cache, Alchemy, configuration, toolbar actions, offline conversion, security,
+  and **6 storage/browser checks**. These cover every check in `test:release`.
+  Browser tests used disposable Chrome for Testing **153.0.8010.12** profiles.
+- The Settings warning was visually inspected at 390 px. README, Help, bundled
+  privacy policy and store submission notes match the simplified behavior.
+  The unpacked build and checksums are refreshed and all checksums verified;
+  release archives and the hosted privacy policy have not been republished.
+
 ## Art Blocks animation, on-demand dependencies and export: 2026-10-20
 
 - Token 5603's `animation_url` references p5.js 1.0.0 on cdnjs. TOKINT now

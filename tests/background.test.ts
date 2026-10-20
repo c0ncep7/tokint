@@ -3,8 +3,7 @@ import assert from 'node:assert/strict';
 import { CID } from 'multiformats/cid';
 import { DEFAULTS, type Settings } from '../src/core';
 import { saveSettings } from '../src/storage';
-import { lockVault, migratePreferences, openVault } from '../src/vault';
-import { storageFixture, TEST_PASSPHRASE } from './vault-fixture';
+import { storageFixture } from './storage-fixture';
 
 test('omnibox events route addresses, tokens and IPFS with the requested tab disposition', async () => {
   let entered: (text: string, disposition: string) => void = () => {};
@@ -12,7 +11,6 @@ test('omnibox events route addresses, tokens and IPFS with the requested tab dis
   let storedReads = 0;
   let prefs: Settings = DEFAULTS;
   const fixture = storageFixture({ settings: prefs, settingsVersion: 2 });
-  await openVault(TEST_PASSPHRASE, migratePreferences);
   const storedGet = fixture.storage.local.get.bind(fixture.storage.local);
   fixture.storage.local.get = (async (...args: unknown[]) => {
     storedReads++;
@@ -67,7 +65,8 @@ test('omnibox events route addresses, tokens and IPFS with the requested tab dis
   assert.deepEqual(navigations.at(-1), { kind: 'create', url: `https://${cid}.ipfs.dweb.link/nested/art.svg`, active: true });
   entered('invalid text', 'currentTab'); await turn();
   assert.equal(new URLSearchParams(new URL(navigations.at(-1)!.url).hash.slice(1)).has('error'), true);
-  await lockVault();
+  fixture.local.vaultHeader = { version: 1 };
   entered(`ipfs://${cid}/metadata.json`, 'currentTab'); await turn();
-  assert.equal(new URLSearchParams(new URL(navigations.at(-1)!.url).hash.slice(1)).get('ipfs'), `ipfs://${cid}/metadata.json`);
+  assert.deepEqual(navigations.at(-1), { kind: 'update', url: `https://gateway.pinata.cloud/ipfs/${cid}/metadata.json` });
+  assert.equal(fixture.local.vaultHeader, undefined);
 });

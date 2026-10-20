@@ -1,4 +1,3 @@
-import { prepareVault } from './vault-browser-helpers.mjs';
 import assert from 'node:assert/strict';
 import { access, cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -39,7 +38,7 @@ try {
       args: [`--disable-extensions-except=${extension}`, `--load-extension=${extension}`],
     });
     const worker = context.serviceWorkers()[0] || await context.waitForEvent('serviceworker');
-    await prepareVault(context, worker);
+
     const requests = [];
     context.on('request', request => requests.push(request.url()));
     let cdnRequests = 0;

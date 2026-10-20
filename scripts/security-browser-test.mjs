@@ -1,4 +1,4 @@
-import { prepareVault, saveTestSettings } from './vault-browser-helpers.mjs';
+import { saveTestSettings } from './storage-browser-helpers.mjs';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
@@ -62,7 +62,7 @@ try {
     args: [`--disable-extensions-except=${extension}`, `--load-extension=${extension}`],
   });
   const worker = context.serviceWorkers()[0] || await context.waitForEvent('serviceworker');
-  await prepareVault(context, worker);
+
   const page = await context.newPage();
   const errors = []; page.on('pageerror', error => errors.push(error.message));
   await page.goto(`chrome-extension://${new URL(worker.url()).host}/results.html`);

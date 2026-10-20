@@ -38,7 +38,7 @@ Use Chrome, Brave, or another Chromium browser that supports unpacked Manifest V
 
 The supplied build needs no Node.js installation. Settings are available from the inspector's gear icon or the browser's extension management page.
 
-**First use:** create and confirm a local unlock passphrase of **6–1024 characters**. Keep it somewhere safe; there is no recovery. Unlock once each Chrome session to use your saved settings and tokens.
+**First use:** open the inspector and start with the public defaults. No passphrase is required. Alchemy and custom RPC URLs are kept only for the browser session unless you enable **Remember on this device** in Settings.
 
 The manual-install ZIP, `tokint-<version>.zip`, contains `extension/`; extract it before choosing **Load unpacked**. The separate `tokint-<version>-chrome-web-store.zip` is for store submission, and the source ZIP is for development.
 
@@ -164,16 +164,30 @@ Open Settings with the inspector's gear icon. Click **Save settings** to apply c
 
 RPC and content requests use direct URLs. Arweave transaction URLs and the original Art Blocks contract's legacy metadata/PNG routes resolve to known direct destinations before content is fetched. Automatic HTTP redirects are blocked before contacting their destinations. If a provider or path-style gateway redirects, use its direct endpoint, choose another gateway/style, or follow the source link in a normal browser tab. The extension does not silently switch providers.
 
-### Unlock saved data
+### RPC storage and existing installations
 
-At first use, enter and confirm a passphrase of **6–1024 characters**. Empty or
-whitespace-only values are rejected. The same passphrase unlocks your saved
-settings and cache after **Lock saved data**, a full browser exit, or an extension
-reload. Closing a window alone may leave Chrome running.
+Public RPC presets, gateway settings, theme, recent tokens, and cached artwork are
+saved locally without encryption. **Alchemy and custom RPC URLs are session-only
+by default**, because any custom endpoint can contain an API key. They work across
+TOKINT tabs and page reloads, but are cleared by a browser restart or by reloading,
+updating, or disabling the extension. Closing one window may leave Chrome running.
+After expiry, token lookups ask you to re-enter the URL or select a public provider
+in Settings; TOKINT does not silently switch providers. IPFS commands still use
+your saved gateway.
 
-Existing vaults continue to use the passphrase chosen when they were created.
-Lowering the minimum does not change that passphrase. There is no passphrase-change
-or recovery control; removing and reinstalling the extension resets its saved data.
+Select **Remember on this device** before saving to persist the complete RPC URL,
+including any key, locally **without encryption**. The checkbox warns that anyone
+with access to your browser profile may be able to read it. This is optional and
+is not Chrome Sync. To stop remembering it, uncheck the option and save; the URL
+then stays only in the current session. Choosing a public preset removes the saved
+custom URL. Editing an endpoint resets the checkbox so a new URL is not remembered
+without another choice.
+
+The passphrase vault and its migration flow have been removed. Old encrypted
+preferences and the previous token cache are discarded on update. Re-enter any
+custom settings and look up tokens again to rebuild the cache. Older unencrypted
+configurations move custom RPC URLs into session storage without assuming consent
+to remember them.
 
 ## Optional Alchemy features
 
@@ -187,11 +201,11 @@ Alchemy endpoint.
 
 1. In the [Alchemy dashboard](https://dashboard.alchemy.com/), obtain the Ethereum mainnet HTTPS RPC URL for an application with NFT API access.
 2. Open TOKINT **Settings**, select **Alchemy (optional)** under **Ethereum mainnet RPC provider**, and paste the complete URL. TOKINT recognizes the form `https://eth-mainnet.g.alchemy.com/v2/<your-application-key>`; replace the placeholder with the URL supplied by Alchemy. An NFT API URL, another chain's URL, or a proxy/custom hostname does not enable these controls.
-3. Click **Save settings** and return to the inspector. Collection and wallet browse buttons appear beside the lookup controls. **Ownership & mint** becomes available when you submit a valid contract/token pair.
+3. Optionally select **Remember on this device** to save the URL and its key locally without encryption. Leave it unchecked for this browser session only. Click **Save settings** and return to the inspector. Collection and wallet browse buttons appear beside the lookup controls. **Ownership & mint** becomes available when you submit a valid contract/token pair.
 4. On the first request, use **Allow and retry** if Chrome needs permission to contact Alchemy. Saving the URL enables the controls but does not verify that the application has working RPC and NFT API access.
 
-The complete endpoint is saved in this browser profile, including its application
-key. There is no separate TOKINT account or wallet connection. Alchemy receives
+The complete endpoint, including its application key, stays in memory unless you
+choose **Remember on this device**. There is no separate TOKINT account or wallet connection. Alchemy receives
 the contract, token, or public wallet identifiers needed for your requests.
 See the [privacy policy](public/privacy.html) for storage and provider details.
 
@@ -258,7 +272,7 @@ token-cache snapshots ineligible for reuse.
 
 Read the [privacy policy](public/privacy.html) for local storage, retention, third-party requests, and deletion details. [PRIVACY.md](PRIVACY.md) explains how to publish its public URL for the store listing; [Web Store submission notes](docs/WEB_STORE.md) provide permission justifications, privacy declarations, and the sandbox explanation for reviewers.
 
-Settings, the last contract, theme, recent-token identities, metadata and cached artwork are encrypted in local browser storage with AES-256-GCM. At first use, create and confirm a passphrase of 6–1024 characters. PBKDF2-HMAC-SHA-256 (600,000 iterations, random salt) derives the keys. TOKINT never saves or transmits the passphrase; derived keys live only in trusted-context Chrome session storage. **Settings → Lock saved data**, quitting Chrome completely, or reloading/disabling/updating the extension clears the keys. Unlocking restores saved data. There is no recovery; remove and reinstall TOKINT to reset a forgotten passphrase. Browser history, downloads and clipboard contents are outside the vault. Providers receive the RPC/content requests you submit. There are no analytics, wallet connections, signing requests, content scripts, or background polling. Toolbar detection uses temporary `activeTab` access and reads the clicked tab's URL without fetching or injecting into its page.
+Preferences, the last contract, theme, recent-token identities, metadata, and cached artwork are saved locally without encryption. Alchemy and custom RPC URLs stay in trusted-context Chrome session storage by default. **Remember on this device** explicitly saves the full URL and any key locally without encryption. No Chrome Sync is used. Browser history, downloads, and clipboard contents have separate browser/OS retention. Providers receive the RPC/content requests you submit. There are no analytics, wallet connections, signing requests, content scripts, or background polling. Toolbar detection uses temporary `activeTab` access and reads the clicked tab's URL without fetching or injecting into its page.
 
 TOKINT requests storage, `activeTab`, and host access for PublicNode, Pinata, and Arweave. OpenSea toolbar detection needs no permanent OpenSea host permission. Other HTTPS hosts and the literal HTTP loopback hosts `localhost` and `127.0.0.1` are optional. Remote plain-HTTP RPC, metadata, media, and gateway requests are rejected; use a direct HTTPS endpoint. **Allow and retry** requests access after a user click; declining leaves source links available. Revoke optional access through the browser's extension management page. Requests omit cookies and referrers. Arweave transaction content and supported Art Blocks legacy routes resolve to direct destinations, with host access checked for each destination before fetching. HTTP redirects, including same-host redirects, are blocked before following them; outbound links use the browser's normal navigation behavior. See [verification notes](VERIFICATION.md) for the tested security boundaries.
 
@@ -312,7 +326,7 @@ Packaging checks the store manifest version and required entry points and legal/
 
 The earlier published 1.0.1 build has a [corresponding source archive](https://github.com/c0ncep7/tokint/releases/download/v1.0.1/tokint-1.0.1-source.zip)
 and [release checksums](https://github.com/c0ncep7/tokint/releases/tag/v1.0.1).
-The Art Blocks fix and six-character minimum are subsequent local changes;
+The Art Blocks updates and optional RPC persistence are subsequent local changes;
 those archives have not been regenerated or published for these changes.
 Publish the updated [privacy policy](public/privacy.html) to its
 [public URL](https://c0ncep7.github.io/tokint/public/privacy.html) with the matching
@@ -343,9 +357,9 @@ Browser tests use temporary profiles and local fixtures, with output under `test
 | `npm run test:opensea` | Actual toolbar actions, including generic token URLs |
 | `npm run test:cache` / `npm run test:alchemy` | Focused browser suites |
 | `npm run test:live` | Optional read-only Loot #1, The Memes #410, Chromie Squiggle #5603, and BAYC #1 metadata checks; requires network access |
-| `npm run test:vault` | Five-character rejection, six-character creation/unlock, confirmation, legacy migration, ciphertext inspection, full browser restart, wrong-passphrase rejection, and cross-tab locking |
+| `npm run test:storage` | Immediate first use, session-only and remembered RPCs, browser restarts, cross-tab updates, and reset of obsolete encrypted data |
 | `npm run test:security` | Real-browser redirect consent, RPC POST isolation, metadata resource bounds, and preview limits |
-| `npm run test:release` | Typecheck, units, build, and all standard browser suites including Art Blocks, offline conversion, security, and vault checks; excludes optional live checks |
+| `npm run test:release` | Typecheck, units, build, and all standard browser suites including Art Blocks, offline conversion, security, and storage checks; excludes optional live checks |
 
 Run `npm audit` with registry access before each release; use `npm outdated` when planning dependency updates. All declared dependencies are used; `gifsicle-wasm-browser` is pinned because the build extracts its embedded runtime. `p5@1.0.0` is a development-only fixture for offline dependency tests and is excluded from the extension. The production dependency URL and SHA-256 pin are in `src/html-dependencies.ts`. See [VERIFICATION.md](VERIFICATION.md) for actual results and outstanding checks.
 
@@ -367,8 +381,8 @@ Update this README in the same change as any user-visible feature, setting,
 permission, limit, or release command. Check core lookup behavior against
 `src/core.ts`, `src/chain.ts`, and `src/results.ts`; Alchemy behavior against
 `src/alchemy.ts`, `src/alchemy-ui.ts`, and `src/rpc-presets.ts`; UI labels against
-`public/results.html` and `public/options.html`; vault behavior and passphrase
-limits against `src/vault.ts` and `src/vault-ui.ts`; and development commands against
+`public/results.html` and `public/options.html`; RPC persistence and cache storage
+against `src/storage.ts` and `src/token-cache.ts`; and development commands against
 `package.json`. Changes to data handling also need matching updates to the privacy
 policy and Web Store declarations. Regenerate release packages after documentation
 changes so their source archive contains the current README.

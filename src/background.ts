@@ -1,6 +1,5 @@
-import { VaultLockedError } from './vault';
+import { getSettingsState } from './storage';
 import { explorer, ipfsUrl, parseQuery } from './core';
-import { getSettings } from './storage';
 
 const escapeXml = (text: string) => text.replace(/[<>&"']/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;' })[c]!);
 function suggestion(text: string) {
@@ -20,13 +19,7 @@ export async function destination(text: string) {
   try {
     const query = parseQuery(text);
     if (query.kind === 'contract') return explorer(query.contract);
-    if (query.kind === 'ipfs') {
-      try { return ipfsUrl(query.ref, await getSettings()); }
-      catch (error) {
-        if (!(error instanceof VaultLockedError)) throw error;
-        return chrome.runtime.getURL(`results.html#${new URLSearchParams({ ipfs: text })}`);
-      }
-    }
+    if (query.kind === 'ipfs') return ipfsUrl(query.ref, (await getSettingsState()).value);
     return chrome.runtime.getURL(`results.html#${new URLSearchParams({ contract: query.contract, token: query.id, run: '1' })}`);
   } catch (e) {
     return chrome.runtime.getURL(`results.html#${new URLSearchParams({ error: e instanceof Error ? e.message : 'Invalid input.' })}`);

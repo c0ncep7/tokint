@@ -1,4 +1,4 @@
-import { prepareVault, saveTestSettings } from './vault-browser-helpers.mjs';
+import { saveTestSettings } from './storage-browser-helpers.mjs';
 import { chromium } from 'playwright';
 import { encodeAbiParameters } from 'viem';
 import assert from 'node:assert/strict';
@@ -39,7 +39,7 @@ async function saved(page, token) {
 }
 try {
   const worker = context.serviceWorkers()[0] || await context.waitForEvent('serviceworker');
-  await prepareVault(context, worker);
+
   const root = `chrome-extension://${new URL(worker.url()).host}`;
   await context.route('https://ethereum-rpc.publicnode.com/**', async route => {
     rpc++; if (offline) return route.fulfill({ status: 503, body: 'Offline fixture' });

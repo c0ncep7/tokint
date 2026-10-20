@@ -1,4 +1,4 @@
-import { prepareVault, saveTestSettings } from './vault-browser-helpers.mjs';
+import { saveTestSettings } from './storage-browser-helpers.mjs';
 import { chromium } from 'playwright';
 import { encodeAbiParameters } from 'viem';
 import { CID } from 'multiformats/cid';
@@ -33,7 +33,6 @@ try {
   const worker = context.serviceWorkers()[0] || await context.waitForEvent('serviceworker');
   const extensionId = new URL(worker.url()).host;
   await worker.evaluate(() => chrome.storage.local.set({ settings: { rpcUrl: 'https://ethereum-rpc.publicnode.com', gatewayUrl: 'https://dweb.link', gatewayStyle: 'subdomain' } }));
-  await prepareVault(context, worker);
   const page = await context.newPage();
   page.on('pageerror', e => errors.push(e.message));
   await context.route('https://ethereum-rpc.publicnode.com/**', async route => {

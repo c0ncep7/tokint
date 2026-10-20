@@ -1,4 +1,3 @@
-import { prepareVault } from './vault-browser-helpers.mjs';
 import { chromium } from 'playwright';
 import { encodeAbiParameters } from 'viem';
 import assert from 'node:assert/strict';
@@ -71,7 +70,7 @@ const errors = [];
 try {
   await (async () => {
   const sw = context.serviceWorkers()[0] || await context.waitForEvent('serviceworker');
-  await prepareVault(context, sw);
+
   const extensionId = new URL(sw.url()).host;
   const page = await context.newPage();
   const cspErrors = [];

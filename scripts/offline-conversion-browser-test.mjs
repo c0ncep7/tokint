@@ -1,4 +1,3 @@
-import { prepareVault } from './vault-browser-helpers.mjs';
 import { chromium } from 'playwright';
 import { encodeAbiParameters } from 'viem';
 import gifenc from 'gifenc';
@@ -16,7 +15,7 @@ try {
     args: [`--disable-extensions-except=${path.resolve('extension')}`, `--load-extension=${path.resolve('extension')}`],
   });
   const sw = context.serviceWorkers()[0] || await context.waitForEvent('serviceworker');
-  await prepareVault(context, sw);
+
   const origin = new URL(sw.url()).origin;
   // Node's URL origin is "null" for chrome-extension URLs.
   const extension = origin === 'null' ? `chrome-extension://${new URL(sw.url()).host}` : origin;

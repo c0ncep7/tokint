@@ -1,4 +1,3 @@
-import { prepareVault } from './vault-browser-helpers.mjs';
 import { chromium } from 'playwright';
 import { encodeAbiParameters } from 'viem';
 import assert from 'node:assert/strict';
@@ -30,7 +29,7 @@ const slowGate = new Promise(resolve => { releaseSlow = resolve; });
 const errors = [];
 try {
   const worker = context.serviceWorkers()[0] || await context.waitForEvent('serviceworker');
-  await prepareVault(context, worker);
+
   const extensionId = new URL(worker.url()).host;
   const page = await context.newPage();
   page.on('pageerror', error => errors.push(error.message));

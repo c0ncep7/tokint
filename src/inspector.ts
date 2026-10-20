@@ -3,10 +3,10 @@ import { storageLocation, type StorageLocation } from './storage-location';
 import { createAlchemyUI } from './alchemy-ui';
 import { cacheKey, cacheScope, clearCache, readCache, rememberImage, rememberToken, usableSnapshot, type RecentToken, type Snapshot } from './token-cache';
 import { renderJson } from './json-view';
-import { address, explorer, Failure, formatMetadata, httpUrl, htmlDataUri, imageDataUri, LatestRequest, parseIpfs, resolveMetadataUri, resolveUri, substituteId, tokenId, type Method } from './core';
+import { address, DEFAULTS, explorer, Failure, formatMetadata, httpUrl, htmlDataUri, imageDataUri, LatestRequest, parseIpfs, resolveMetadataUri, resolveUri, substituteId, tokenId, type Method } from './core';
 import { readTokenUri } from './chain';
 import { loadPreview, loadMetadata } from './network';
-import { getLastContract, getSettings, saveLastContract } from './storage';
+import { getLastContract, getSettings, saveLastContract, SESSION_RPC_KEY } from './storage';
 import { embeddedMediaBlob, mediaExtension } from './downloads';
 import { createMediaModal } from './media-modal';
 import { createShareModal } from './share-modal';
@@ -52,9 +52,9 @@ const alchemy = createAlchemyUI((contract, token) => {
 let configRevision = 0;
 async function configureAlchemy() {
   const revision = ++configRevision;
-  try { const prefs = await getSettings(); if (revision === configRevision) alchemy.configure(prefs); } catch { /* Inspector handles settings errors separately. */ }
+  try { const prefs = await getSettings(); if (revision === configRevision) alchemy.configure(prefs); } catch { if (revision === configRevision) alchemy.configure(DEFAULTS); }
 }
-chrome.storage.onChanged.addListener((changes, area) => { if (area === 'local' && changes.settings) void configureAlchemy(); });
+chrome.storage.onChanged.addListener((changes, area) => { if ((area === 'local' && (changes.settings || changes.rpcStorage)) || (area === 'session' && changes[SESSION_RPC_KEY])) void configureAlchemy(); });
 void configureAlchemy();
 const rawInput = el<HTMLTextAreaElement>('raw-uri');
 const resolvedInput = el<HTMLTextAreaElement>('resolved-uri');

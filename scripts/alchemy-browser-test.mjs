@@ -1,4 +1,4 @@
-import { prepareVault, saveTestSettings } from './vault-browser-helpers.mjs';
+import { saveTestSettings } from './storage-browser-helpers.mjs';
 import { chromium } from 'playwright';
 import { encodeAbiParameters } from 'viem';
 import assert from 'node:assert/strict';
@@ -24,7 +24,7 @@ const check = message => { checks++; console.log(`PASS ${message}`); };
 const nft = (id, named = true) => ({ contract: { address: contract, name: 'Fixture collection' }, tokenId: id, name: named ? `Artwork ${id === huge ? 'Large ID' : id}` : null, image: named ? { thumbnailUrl: 'https://res.cloudinary.com/alchemyapi/image/upload/fixture.svg' } : {} });
 try {
   const worker = context.serviceWorkers()[0] || await context.waitForEvent('serviceworker');
-  await prepareVault(context, worker);
+
   const root = `chrome-extension://${new URL(worker.url()).host}`;
   const page = await context.newPage(); page.on('pageerror', e => errors.push(e.message));
   await context.route('https://eth-mainnet.g.alchemy.com/**', async route => {

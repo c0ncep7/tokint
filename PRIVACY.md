@@ -16,13 +16,19 @@ and permission justifications. Keep the public policy, bundled policy, listing,
 and dashboard declarations consistent when changing functionality. Publishing
 the policy and configuring the listing are separate from building the extension.
 
-Version 1.0.1 adds passphrase-based encryption for persistent user data.
-The current build accepts 6–1024 characters for creation and unlock, rejects
-empty or whitespace-only input, and requires confirmation when creating a vault.
-Existing vaults still require their original passphrase. The passphrase is not
-stored or transmitted. Derived keys use memory-only Chrome session storage;
-vault records contain ciphertext, nonces and non-secret KDF metadata. Browser
-history, downloads and clipboard contents remain outside the vault.
+The current build removes the mandatory passphrase vault. Preferences, recent
+identities, metadata and cached artwork are stored locally without encryption.
+Alchemy and all custom RPC URLs are session-only by default. **Remember on this
+device** explicitly persists the entire URL and any API key locally without
+encryption. Neither mode uses Chrome Sync. Browser restart or extension
+reload/update/disable clears session-only URLs; token lookups require configuration
+again rather than silently switching providers.
+
+The vault and its migration flow have been removed. Old encrypted preferences and
+the previous token cache are discarded; custom settings must be re-entered and
+tokens looked up again. No passphrase is requested or processed. Existing plaintext
+custom endpoints move to session-only storage without assuming persistence consent.
+Browser history, downloads and clipboard contents have separate retention.
 
 Known Arweave transaction and original Art Blocks metadata/PNG routes resolve to
 direct content destinations before fetching. Destination host permission is
@@ -39,7 +45,7 @@ identifiers or preferences go into it.
 The sandbox itself still has no network access. The CDN receives the library
 request and connection information described in the policy.
 
-The passphrase, Art Blocks, on-demand dependency and export updates postdate the recorded
+The storage, Art Blocks, on-demand dependency and export updates postdate the recorded
 1.0.1 publication. Updating this checkout and rebuilding the bundled policy does
 not deploy the public policy or replace published release archives. Publish
 the matching policy and release together; see [VERIFICATION.md](VERIFICATION.md).

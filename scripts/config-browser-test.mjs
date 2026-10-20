@@ -1,4 +1,3 @@
-import { prepareVault } from './vault-browser-helpers.mjs';
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm, mkdir } from 'node:fs/promises';
@@ -19,7 +18,7 @@ try {
   const invalidCsp = [];
   page.on('console', message => { if (/invalid source/i.test(message.text())) invalidCsp.push(message.text()); });
   const main = context.serviceWorkers()[0] ?? await context.waitForEvent('serviceworker');
-  await prepareVault(context, main);
+
   const mainId = new URL(main.url()).host;
   const options = `chrome-extension://${mainId}/options.html`;
   await page.goto(options);
