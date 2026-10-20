@@ -92,7 +92,7 @@ or listing assets. Source and store-asset ZIPs are separate downloads.
 
 ## Publication and next step
 
-- Matching source, binary, listing assets, and checksums:
+- Matching source, listing assets, and release checksums:
   https://github.com/c0ncep7/tokint/releases/tag/v1.0.3.
 - Public privacy policy: https://c0ncep7.github.io/tokint/public/privacy.html.
   It must match the bundled `privacy.html` byte for byte.
