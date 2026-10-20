@@ -2,7 +2,7 @@ import { address, tokenId, type Method, type Settings } from './core';
 import { vaultKeys } from './vault';
 import { isSealed, recordId, seal, unseal, type Sealed, type VaultKeys } from './vault-crypto';
 
-export const RECENT_LIMIT = 30;
+const RECENT_LIMIT = 30;
 export const CACHE_BYTES = 50 * 1024 * 1024;
 export const CACHE_AGE = 24 * 60 * 60 * 1000;
 export type Snapshot = {

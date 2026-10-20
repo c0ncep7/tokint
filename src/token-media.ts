@@ -1,4 +1,4 @@
-export type TokenMedia = { field: string; uri: string };
+type TokenMedia = { field: string; uri: string };
 
 // Prefer animation_url when present, with image as the first fallback. A field's name does not
 // determine its format: animation_url can contain GIF, WebP, SVG, or other media.

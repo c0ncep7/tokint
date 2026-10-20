@@ -126,7 +126,7 @@ export function createShareModal() {
   }
   function cleanup() {
     originalController?.abort(); originalController = undefined; fetchOriginal.disabled = false; setBusy(originalStatus, false);
-    stop(); clearOutput(); document.body.classList.remove('modal-open');
+    stop(); clearOutput();
     if (!open.hidden) open.focus();
   }
   function dismiss() { if (dialog.open) dialog.close(); cleanup(); }
@@ -225,7 +225,7 @@ export function createShareModal() {
     if (!source || dialog.open) return;
     clearOutput(); sourceLabel(); updateControls();
     message(source?.inspectionError ?? '', !!source?.inspectionError); originalStatus.textContent = '';
-    dialog.showModal(); document.body.classList.add('modal-open');
+    dialog.showModal();
     void checkCapabilities();
     el('close-share-modal').focus();
     void inspectSource();

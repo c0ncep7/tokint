@@ -220,7 +220,7 @@ try {
   await page.waitForFunction(() => !document.querySelector('#media-modal').open);
   assert.equal(await page.evaluate(() => document.activeElement.id), 'fullscreen-media');
   assert.equal(await page.locator('#fullscreen-image').getAttribute('src'), null);
-  assert.equal(await page.evaluate(() => document.body.classList.contains('modal-open')), false);
+  assert.notEqual(await page.evaluate(() => getComputedStyle(document.body).overflow), 'hidden');
   check('Escape closes fullscreen, clears media, restores focus and unlocks scrolling');
   await page.locator('#fullscreen-media').click();
   await page.locator('#close-media-modal').click();

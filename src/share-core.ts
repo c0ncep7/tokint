@@ -12,7 +12,7 @@ export type ShareOptions = {
   fps: number;
   background: '#000000' | '#ffffff';
 };
-export type MediaInfo = { width: number; height: number; frames: number; bytes: number; type: string };
+type MediaInfo = { width: number; height: number; frames: number };
 export type ShareResult = { blob: Blob; width: number; height: number; frames: number; duration: number; extension: 'jpg' | AnimationFormat; notes: string[] };
 export type ShareMessage = { kind: 'info'; info: MediaInfo } | { kind: 'progress'; text: string; value: number } | { kind: 'done'; result: ShareResult } | { kind: 'error'; message: string; code?: 'size'; suggestedEdge?: number };
 

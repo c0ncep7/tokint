@@ -356,11 +356,10 @@ Additional tools:
 ```sh
 node scripts/interactive-smoke.mjs
 node scripts/render-icons.mjs
-SVG_FILE=/path/to/art.svg EDGE=500 FPS=10 CLIP_SECONDS=10 FORMAT=gif node scripts/svg-file-browser-test.mjs
 SVG_FILE=/path/to/art.svg EDGE=1000 FPS=25 CLIP_SECONDS=11.2 node scripts/animation-review.mjs
 ```
 
-The interactive tool opens an isolated manual-test browser. The icon tool renders `public/icons/tokint.svg` to PNGs; rebuild afterward. SVG tools use a local artwork file without adding it to the extension; animation review generates sampling/encoding measurements rather than a release pass/fail result.
+The interactive tool opens an isolated manual-test browser. The icon tool renders `public/icons/tokint.svg` to PNGs; rebuild afterward. Animation review uses a local SVG artwork file without adding it to the extension and generates sampling/encoding measurements rather than a release pass/fail result. Automated SVG conversion checks use bundled fixtures in `scripts/share-browser-test.mjs`, included in `npm run test:browser`.
 
 ### Keeping this README current
 

@@ -19,7 +19,7 @@ async function convert(blob: Blob, options?: ShareOptions): Promise<ShareResult 
     const track = decoder.tracks.selectedTrack;
     if (!track) throw new Error('No image track found.');
     const frames = track.frameCount;
-    send({ kind: 'info', info: { ...header, frames, bytes: blob.size } });
+    send({ kind: 'info', info: { width: header.width, height: header.height, frames } });
     // A metadata-only probe does not decode frames or generate an export.
     if (!options) return;
     if (!frames || frames > 1000 || frames * header.width * header.height > MAX_ANIMATION_PIXELS) throw new Error('This animation exceeds the local decoding budget (1000 frames / 160 million source pixels across frames). Use a dedicated editor for this file.');
@@ -28,7 +28,7 @@ async function convert(blob: Blob, options?: ShareOptions): Promise<ShareResult 
     const first = (await decoder.decode({ frameIndex: 0 })).image;
     const width = first.displayWidth, height = first.displayHeight;
     first.close();
-    send({ kind: 'info', info: { width, height, frames, bytes: blob.size, type: header.type } });
+    send({ kind: 'info', info: { width, height, frames } });
     if (width * height > 32_000_000) throw new Error('Decoded image is too large to process safely.');
     const durations: number[] = [];
     if (animated) {

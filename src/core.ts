@@ -3,7 +3,7 @@ import { CID } from 'multiformats/cid';
 import { base32 } from 'multiformats/bases/base32';
 import { base64url } from 'multiformats/bases/base64';
 
-export type FailureKind = 'input' | 'permission' | 'rpc' | 'contract' | 'metadata' | 'gateway' | 'json' | 'image';
+type FailureKind = 'input' | 'permission' | 'rpc' | 'contract' | 'metadata' | 'gateway' | 'json' | 'image';
 export class Failure extends Error {
   constructor(public kind: FailureKind, message: string, public origin?: string) { super(message); this.name = 'Failure'; }
 }
@@ -80,7 +80,7 @@ export function contentUrl(value: string): string {
   }
   return url.href;
 }
-export type IpfsRef = { cid: string; suffix: string };
+type IpfsRef = { cid: string; suffix: string };
 export function parseIpfs(value: string): IpfsRef | null {
   let raw = value.trim();
   if (/^https?:\/\//i.test(raw)) {
@@ -142,7 +142,7 @@ export function resolveMetadataUri(value: string, prefs: Settings, contract: str
 }
 export function substituteId(value: string, id: bigint): string { return value.replaceAll('{id}', id.toString(16).padStart(64, '0')); }
 export function explorer(contract: string): string { return `https://etherscan.io/address/${address(contract)}#readContract`; }
-export type Query = { kind: 'contract'; contract: string } | { kind: 'token'; contract: string; id: string } | { kind: 'ipfs'; ref: IpfsRef };
+type Query = { kind: 'contract'; contract: string } | { kind: 'token'; contract: string; id: string } | { kind: 'ipfs'; ref: IpfsRef };
 export function parseQuery(value: string): Query {
   const raw = value.trim();
   const parts = raw.split(/\s+/);

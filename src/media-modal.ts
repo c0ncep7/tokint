@@ -17,7 +17,6 @@ export function createMediaModal(preview: HTMLImageElement) {
     image.alt = preview.alt;
     title.textContent = preview.alt || 'Media';
     dialog.showModal();
-    document.body.classList.add('modal-open');
     close.focus();
     if (html) {
       const controller = htmlController = new AbortController();
@@ -28,7 +27,6 @@ export function createMediaModal(preview: HTMLImageElement) {
   });
   function cleanup() {
     htmlController?.abort(); htmlController = undefined; htmlStage.replaceChildren();
-    document.body.classList.remove('modal-open');
     image.removeAttribute('src');
     if (!open.hidden) open.focus();
   }

@@ -9,14 +9,14 @@ const abi = parseAbi([
   'function uri(uint256 tokenId) view returns (string)',
 ]);
 export type ContractReader = (method: 'supportsInterface' | 'tokenURI' | 'uri', argument: bigint | `0x${string}`) => Promise<unknown>;
-export function underlyingFailure(error: unknown): Failure | undefined {
+function underlyingFailure(error: unknown): Failure | undefined {
   let current: unknown = error;
   for (let i = 0; current && i < 12; i++) {
     if (current instanceof Failure) return current;
     current = typeof current === 'object' && 'cause' in current ? current.cause : undefined;
   }
 }
-export function contractError(error: unknown): Failure {
+function contractError(error: unknown): Failure {
   const failure = underlyingFailure(error);
   if (failure) return failure;
   return new Failure('contract', 'The contract returned no usable URI. The token may not exist or the selected metadata function may not be supported.');

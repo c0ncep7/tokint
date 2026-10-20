@@ -28,7 +28,7 @@ export function createAlchemyUI(onToken: (contract: string, token: string) => vo
   }
   function closeBrowse() {
     browseRequests.cancel(); setBusy(el('browse-status'), false); cleanThumbnails();
-    if (browse.open) { browse.close(); document.body.classList.remove('modal-open'); }
+    if (browse.open) browse.close();
   }
   function resetToken() {
     detailRequests.cancel(); setBusy(el('alchemy-asof'), false); token = undefined; detailLoaded = false; details.hidden = true;
@@ -133,7 +133,7 @@ export function createAlchemyUI(onToken: (contract: string, token: string) => vo
     el('browse-grid').replaceChildren(); el('browse-status').textContent = ''; el('browse-page').textContent = '';
     button('browse-retry').hidden = button('browse-images').hidden = true;
     button('browse-prev').disabled = button('browse-next').disabled = true;
-    browse.showModal(); document.body.classList.add('modal-open'); input.focus();
+    browse.showModal(); input.focus();
     if (kind === 'collection') submitBrowse();
   }
   function submitBrowse() {

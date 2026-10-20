@@ -6,7 +6,7 @@ export type NetworkOptions = {
   permitted?: (origin: string) => Promise<boolean>;
   timeoutMs?: number;
 };
-export async function requireAccess(url: string, opts: NetworkOptions = {}) {
+async function requireAccess(url: string, opts: NetworkOptions = {}) {
   const origin = permissionPattern(url);
   const allowed = await (opts.permitted ?? (p => chrome.permissions.contains({ origins: [p] })))(origin);
   if (!allowed) throw new Failure('permission', `Allow access to ${new URL(url).origin} to continue.`, origin);
@@ -60,9 +60,9 @@ async function requestBody(url: string, kind: 'rpc' | 'metadata' | 'gateway' | '
     opts.signal?.removeEventListener('abort', abort);
   }
 }
-export async function requestBytes(url: string, kind: 'rpc' | 'metadata' | 'gateway' | 'image', limit: number, opts: NetworkOptions = {}, init: RequestInit = {}): Promise<{ bytes: Uint8Array<ArrayBuffer>; url: string; contentType: string }> {
+export async function requestBytes(url: string, kind: 'rpc' | 'metadata' | 'gateway' | 'image', limit: number, opts: NetworkOptions = {}, init: RequestInit = {}): Promise<{ bytes: Uint8Array<ArrayBuffer>; url: string }> {
   const result = await requestBody(url, kind, limit, opts, init);
-  return { bytes: new Uint8Array(await result.blob.arrayBuffer()), url: result.url, contentType: result.contentType };
+  return { bytes: new Uint8Array(await result.blob.arrayBuffer()), url: result.url };
 }
 export async function loadMetadata(url: string, opts: NetworkOptions = {}, ipfs = false) {
   if (url.startsWith('data:')) {

@@ -1,11 +1,11 @@
 import { tokenFromUrl } from './token-url';
 
-export type ClickedTab = Pick<chrome.tabs.Tab, 'id' | 'url' | 'pendingUrl' | 'windowId'>;
+type ClickedTab = Pick<chrome.tabs.Tab, 'id' | 'url' | 'pendingUrl' | 'windowId'>;
 export type TabAccess = {
   get: (id: number) => Promise<ClickedTab>;
   query: (query: chrome.tabs.QueryInfo) => Promise<ClickedTab[]>;
 };
-export type ToolbarPage = { url?: string; via: 'refreshed-tab' | 'click-event' | 'active-tab' | 'unavailable' };
+type ToolbarPage = { url?: string; via: 'refreshed-tab' | 'click-event' | 'active-tab' | 'unavailable' };
 const pageUrl = (tab: ClickedTab) => tab.pendingUrl || tab.url;
 
 export async function toolbarPage(clicked: ClickedTab, tabs: TabAccess): Promise<ToolbarPage> {

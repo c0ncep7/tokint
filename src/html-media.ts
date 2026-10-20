@@ -1,7 +1,7 @@
 import { loadHtmlDependencies } from './html-dependencies';
 
 export type HtmlMedia = {
-  element: HTMLIFrameElement; width: number; height: number; capture: boolean;
+  width: number; height: number; capture: boolean;
   pixels(milliseconds: number, width: number, height: number, background: string): Promise<ImageData>;
   dispose(): void;
 };
@@ -65,7 +65,7 @@ export async function createHtmlMedia(blob: Blob, host: HTMLElement, signal: Abo
     const info = await ready;
     if (![info.width, info.height].every(v => Number.isInteger(v) && v > 0 && v <= 32768) || info.width * info.height > 32_000_000) throw new Error('HTML canvas dimensions exceed the preview limit.');
     return {
-      element, width: info.width, height: info.height, capture: info.capture === true, dispose,
+      width: info.width, height: info.height, capture: info.capture === true, dispose,
       async pixels(milliseconds, width, height, background) {
         if (![width, height].every(v => Number.isInteger(v) && v >= 1 && v <= 2000)) throw new Error('Invalid HTML export dimensions.');
         const result = await request(++sequence, { kind: 'frame', milliseconds, width, height, background });

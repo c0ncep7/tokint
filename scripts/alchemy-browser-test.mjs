@@ -179,7 +179,7 @@ try {
   await page.screenshot({ path: 'test-results/alchemy-narrow-light.png', fullPage: true });
   await page.keyboard.press('Escape');
   assert.equal(await page.locator('#browse-modal').evaluate(d => d.open), false);
-  assert.equal(await page.evaluate(() => document.body.classList.contains('modal-open')), false);
+  assert.notEqual(await page.evaluate(() => getComputedStyle(document.body).overflow), 'hidden');
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
   await page.screenshot({ path: 'test-results/header-narrow-light.png', fullPage: true });
   await page.locator('#open-info').click();
