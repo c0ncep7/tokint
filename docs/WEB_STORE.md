@@ -1,24 +1,29 @@
 # Chrome Web Store submission notes
 
-Prepared for TOKINT 1.0.1. These are copy-ready answers for the publisher's
+Prepared for TOKINT 1.0.2. These are copy-ready answers for the publisher's
 dashboard, not evidence that the extension has been submitted or approved.
 
 ## Package
 
 Run `npm ci`, `npm run test:release`, and `npm run package:store` with Node.js 22+.
-Upload `releases/1.0.1/tokint-1.0.1-chrome-web-store.zip`. The production packaging
+Upload `releases/1.0.2/tokint-1.0.2-chrome-web-store.zip`. The production packaging
 step puts `manifest.json` at the ZIP root and validates entry points, versions,
 icons, and legal/privacy files. The other binary ZIP is for manual installation.
 There is one extension and one keyword, `tokint`; no companion or extension-ID
-pairing is required. Version changes must update package, lockfile, and manifest.
+pairing is required. Version changes must update package, lockfile, and manifest. Chrome uses the
+[numeric manifest version](https://developer.chrome.com/docs/extensions/reference/manifest/version)
+to determine updates; 1.0.2 supersedes 1.0.1.
 
-The current checkout includes the Art Blocks redirect and animation fixes,
-animation-first media selection, on-demand dependency loading, click-to-start
-export, and optional RPC persistence added
-after the recorded 1.0.1 publication. Regenerate and
-publish matching binary/source archives, checksums, and the public policy before
-using these updated reviewer instructions for a submission. Existing published
-archive links below identify the earlier build; see [verification](../VERIFICATION.md).
+Version 1.0.2 includes the Art Blocks fixes, animation-first selection, on-demand
+p5.js loading, click-to-start exports, optional RPC persistence, and a smaller RPC
+client bundle. See [verification](../VERIFICATION.md) for the exact checks and
+artifact status. The earlier 1.0.1 source release does not match this package.
+Publish the matching 1.0.2 source/checksums and deploy the current policy before
+submission. The hosted policy was checked and still describes the retired vault.
+
+Packaging does not upload or submit the extension. Follow Google's
+[publishing workflow](https://developer.chrome.com/docs/webstore/publish) after
+completing the listing, privacy, distribution, and reviewer fields.
 
 ## Single purpose
 
@@ -149,17 +154,19 @@ metadata URI and shows the direct metadata URL.
 HTTP redirect following remains disabled. Other Art Blocks contracts and
 cross-token metadata references are outside this compatibility mapping.
 
-## Published supporting pages and source
+## Supporting pages and matching source
 
-- Privacy policy: https://c0ncep7.github.io/tokint/public/privacy.html
-- Support: https://github.com/c0ncep7/tokint/issues
-- Earlier published 1.0.1 source: https://github.com/c0ncep7/tokint/releases/download/v1.0.1/tokint-1.0.1-source.zip
-- Earlier release and checksums: https://github.com/c0ncep7/tokint/releases/tag/v1.0.1
+- Privacy policy: https://c0ncep7.github.io/tokint/public/privacy.html. Deploy the
+  updated local policy; the hosted copy currently describes the old vault.
+- Support: https://github.com/c0ncep7/tokint/issues.
+- Source to publish: `releases/1.0.2/tokint-1.0.2-source.zip` with the matching
+  `SHA256SUMS.txt`. Use its actual published URL in the listing/support page.
+- The [earlier 1.0.1 source release](https://github.com/c0ncep7/tokint/releases/tag/v1.0.1)
+  is historical and must not be presented as the source for the 1.0.2 binary.
 
-The current build replaces the vault with session-only RPC configuration and
-explicit persistence consent. Inspect `src/storage.ts`, `src/token-cache.ts`,
-and the storage reset/restart tests. Persistent settings,
-cache, and opted-in RPC URLs are not encrypted; the policy discloses this.
+Persistent settings, cache, and opted-in RPC URLs are not encrypted; the policy
+and reviewer instructions disclose this. Inspect `src/storage.ts`,
+`src/token-cache.ts`, and the storage reset/restart tests.
 
 ## Final dashboard steps
 

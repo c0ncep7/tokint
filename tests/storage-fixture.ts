@@ -10,8 +10,7 @@ export function storageFixture(initial: Record<string, unknown> = {}) {
     setAccessLevel: async () => {},
   });
   Object.assign(globalThis, { chrome: { storage: { local: area(local), session: area(session) } } });
-  // The test double preserves serialization without depending on Node's optional
-  // Web Locks implementation. Browser coverage exercises real cross-tab locks.
+  // Unit cases run sequentially. Browser coverage exercises real cross-tab locks.
   Object.defineProperty(globalThis, 'navigator', { configurable: true, value: {
     locks: { request: async (_name: string, run: () => Promise<unknown>) => run() },
   } });

@@ -29,6 +29,9 @@ setting and works with either choice of RPC provider.
 
 ## Install
 
+Current production package: **1.0.2**. See [release verification](VERIFICATION.md)
+for validation results and the remaining publication steps.
+
 Use Chrome, Brave, or another Chromium browser that supports unpacked Manifest V3 extensions. The manifest requires Chromium 109 or later; use a current browser for media decoding and conversion support.
 
 1. Extract the release folder to a permanent location. If you have source only, [build it](#development) first.
@@ -300,7 +303,7 @@ npm ci
 npm run check
 ```
 
-`check` runs strict TypeScript checking, deterministic unit tests, and the production build. The build replaces `extension/`, removes a stale generated `ipfs-extension/` directory from older builds, packages local JavaScript/WebAssembly, licenses, privacy information, and third-party notices, and regenerates `SHA256SUMS.txt`. The source manifest and lockfile must match the version in `package.json`. Edit source files, not generated builds.
+`check` runs strict TypeScript checking, deterministic unit tests, and the production build. The build replaces `extension/`, removes a stale generated `ipfs-extension/` directory from older builds, packages local JavaScript/WebAssembly, licenses, privacy information, and third-party notices, and regenerates `SHA256SUMS.txt`. The source manifest and lockfile must match the version in `package.json`. For a new release, increment all three versions before packaging; use a numeric Chrome-compatible version, then update the release references in this README, `VERIFICATION.md`, and `docs/WEB_STORE.md`. Edit source files, not generated builds.
 
 Every build also writes `bundle-report.json` with exact unpacked file sizes,
 JavaScript dependency contributions, and esbuild metadata. Copied WASM and its
@@ -324,15 +327,17 @@ npm run package:store
 
 Packaging checks the store manifest version and required entry points and legal/privacy files. It uses Node.js without a system archive tool. Entries have fixed timestamps and stable ordering; unchanged inputs on the same toolchain produce identical archives. Repeating the command replaces that version's local artifacts. Packaging does not publish or run browser tests.
 
-The earlier published 1.0.1 build has a [corresponding source archive](https://github.com/c0ncep7/tokint/releases/download/v1.0.1/tokint-1.0.1-source.zip)
-and [release checksums](https://github.com/c0ncep7/tokint/releases/tag/v1.0.1).
-The Art Blocks updates and optional RPC persistence are subsequent local changes;
-those archives have not been regenerated or published for these changes.
-Publish the updated [privacy policy](public/privacy.html) to its
-[public URL](https://c0ncep7.github.io/tokint/public/privacy.html) with the matching
-release. See [verification](VERIFICATION.md) for the recorded build and release status.
+The current local release is **1.0.2**, under `releases/1.0.2/`. It includes the
+Art Blocks fixes, animation-first selection, on-demand p5.js support,
+click-to-start exports, and optional RPC persistence. The earlier
+[1.0.1 source release](https://github.com/c0ncep7/tokint/releases/tag/v1.0.1)
+does not match this build. Publish the 1.0.2 source ZIP and checksums alongside
+its binary, and deploy the updated [privacy policy](public/privacy.html) to its
+[public URL](https://c0ncep7.github.io/tokint/public/privacy.html). The currently
+hosted policy still describes the retired vault. See [verification](VERIFICATION.md)
+for the checked release and publication status.
 
-TOKINT is licensed under **GPL-2.0-only**; see [LICENSE](LICENSE) and [distribution requirements](DISTRIBUTION.md). Make the matching source archive available alongside each binary release. Before submission, publish the [privacy policy](public/privacy.html) at a public HTTPS URL, complete the listing and reviewer fields in [docs/WEB_STORE.md](docs/WEB_STORE.md), and perform the separate real-world release checks in [VERIFICATION.md](VERIFICATION.md).
+TOKINT is licensed under **GPL-2.0-only**; see [LICENSE](LICENSE) and [distribution requirements](DISTRIBUTION.md). Make the matching source archive available alongside each binary release. Before submission, publish the [privacy policy](public/privacy.html) at a public HTTPS URL, complete the listing and reviewer fields in [docs/WEB_STORE.md](docs/WEB_STORE.md), and complete the remaining publisher steps in [VERIFICATION.md](VERIFICATION.md).
 
 For the complete automated release checks:
 
@@ -379,7 +384,7 @@ The interactive tool opens an isolated manual-test browser. The icon tool render
 
 Update this README in the same change as any user-visible feature, setting,
 permission, limit, or release command. Check core lookup behavior against
-`src/core.ts`, `src/chain.ts`, and `src/results.ts`; Alchemy behavior against
+`src/core.ts`, `src/chain.ts`, and `src/inspector.ts`; Alchemy behavior against
 `src/alchemy.ts`, `src/alchemy-ui.ts`, and `src/rpc-presets.ts`; UI labels against
 `public/results.html` and `public/options.html`; RPC persistence and cache storage
 against `src/storage.ts` and `src/token-cache.ts`; and development commands against

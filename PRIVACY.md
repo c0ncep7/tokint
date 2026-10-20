@@ -45,7 +45,8 @@ identifiers or preferences go into it.
 The sandbox itself still has no network access. The CDN receives the library
 request and connection information described in the policy.
 
-The storage, Art Blocks, on-demand dependency and export updates postdate the recorded
-1.0.1 publication. Updating this checkout and rebuilding the bundled policy does
-not deploy the public policy or replace published release archives. Publish
-the matching policy and release together; see [VERIFICATION.md](VERIFICATION.md).
+Version 1.0.2 includes these storage, Art Blocks, dependency and export changes.
+The hosted policy was checked during release preparation and still describes the
+old encrypted vault and 12-character passphrase. Deploy `public/privacy.html`
+before submitting 1.0.2. Building or packaging does not update GitHub Pages or the
+published source release; see [VERIFICATION.md](VERIFICATION.md).

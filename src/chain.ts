@@ -1,4 +1,5 @@
-import { createPublicClient, custom, parseAbi } from 'viem';
+import { createClient, custom, parseAbi } from 'viem';
+import { getChainId, readContract } from 'viem/actions';
 import { mainnet } from 'viem/chains';
 import { Failure, type Method } from './core';
 import { requestBytes, type NetworkOptions } from './network';
@@ -45,7 +46,9 @@ export async function chooseUri(read: ContractReader, id: bigint, method: Method
 }
 export async function readTokenUri(rpcUrl: string, contract: `0x${string}`, id: bigint, method: Method, opts: NetworkOptions = {}) {
   let requestId = 0;
-  const client = createPublicClient({
+  // Import only the actions used here; the full public client retains unrelated
+  // RPC operations and their dependencies in the extension bundle.
+  const client = createClient({
     chain: mainnet,
     // Keep all network access inside our permission and timeout handling.
     ccipRead: false,
@@ -67,10 +70,10 @@ export async function readTokenUri(rpcUrl: string, contract: `0x${string}`, id: 
     } }, { retryCount: 0 }),
   });
   try {
-    if (await client.getChainId() !== 1) throw new Failure('rpc', 'This endpoint is not Ethereum mainnet (chain ID 1). Change the RPC URL in Settings.');
+    if (await getChainId(client) !== 1) throw new Failure('rpc', 'This endpoint is not Ethereum mainnet (chain ID 1). Change the RPC URL in Settings.');
     const read: ContractReader = async (functionName, argument) => {
       try {
-        return await client.readContract({ address: contract, abi, functionName, args: [argument] as never, blockTag: 'latest' });
+        return await readContract(client, { address: contract, abi, functionName, args: [argument] as never, blockTag: 'latest' });
       } catch (error) { if (opts.signal?.aborted) throw error; throw contractError(error); }
     };
     return await chooseUri(read, id, method);
