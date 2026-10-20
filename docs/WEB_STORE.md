@@ -12,6 +12,12 @@ icons, and legal/privacy files. The other binary ZIP is for manual installation.
 There is one extension and one keyword, `tokint`; no companion or extension-ID
 pairing is required. Version changes must update package, lockfile, and manifest.
 
+The current checkout includes the Art Blocks redirect fix and six-character
+passphrase minimum added after the recorded 1.0.1 publication. Regenerate and
+publish matching binary/source archives, checksums, and the public policy before
+using these updated reviewer instructions for a submission. Existing published
+archive links below identify the earlier build; see [verification](../VERIFICATION.md).
+
 ## Single purpose
 
 Inspect Ethereum NFT metadata and artwork, resolve IPFS references, and save or
@@ -26,7 +32,7 @@ convert associated media locally.
 | `https://ethereum-rpc.publicnode.com/*` | Default Ethereum mainnet RPC for read-only contract/interface and metadata-URI calls. |
 | `https://gateway.pinata.cloud/*` | Default IPFS gateway for metadata and media referenced by the user's lookup. |
 | `https://*.arweave.net/*` | Retrieves NFT metadata/media hosted on Arweave. Transaction URLs are resolved directly to their deterministic sandbox subdomains, with destination host permission checked before fetching. |
-| Optional `https://*/*` | NFTs can reference arbitrary HTTPS metadata/media hosts, and users can select custom RPC or IPFS providers. The extension requests the specific host needed after an explicit user action; the wildcard is not granted wholesale. Optional Alchemy thumbnails request its two documented CDN hosts. |
+| Optional `https://*/*` | NFTs can reference arbitrary HTTPS metadata/media hosts, and users can select custom RPC or IPFS providers. The extension requests the specific host needed after an explicit user action; the wildcard is not granted wholesale. Supported Art Blocks legacy routes check access to `token.artblocks.io` for metadata and `artblocks-mainnet.s3.amazonaws.com` for PNG artwork. Optional Alchemy thumbnails request its two documented CDN hosts. |
 | Optional HTTP loopback hosts | Allows the user to select a local RPC or IPFS service on `localhost` or `127.0.0.1`. No arbitrary remote HTTP or LAN host access is requested. |
 
 ## Remote code declaration
@@ -86,13 +92,17 @@ Choose your RPC and IPFS gateway in Settings. Optional Alchemy support adds
 collection/wallet browsing and ownership information. No wallet connection or
 account is required for core features. Lookups go directly to providers, which
 receive the requested identifiers and your IP address. Recent tokens and cached
-media stay encrypted in your browser profile and can be cleared. Set a local unlock passphrase at first use; unlock again after quitting Chrome. No passphrase recovery is available. See the privacy policy
+media stay encrypted in your browser profile and can be cleared. Create and
+confirm a local unlock passphrase of 6–1024 characters at first use; unlock again
+after quitting Chrome completely. No passphrase recovery is available. See the privacy policy
 for permissions, local storage, and provider disclosures.
 
 ## Reviewer instructions
 
 1. Install the single extension. At first use, create and confirm a disposable
-   local passphrase of at least 12 characters. No account, publisher credentials,
+   local passphrase of 6–1024 characters. Five characters and whitespace-only
+   input are rejected; a six-character passphrase can create and unlock the vault.
+   No account, publisher credentials,
    or provider API key is required for the core path. Open Settings and inspect
    the default PublicNode RPC and Pinata gateway.
 2. Type `tokint`, press Tab, and enter
@@ -107,18 +117,26 @@ for permissions, local storage, and provider disclosures.
 6. In Settings, click **Lock saved data**, then unlock with your passphrase.
    Quit Chrome completely and reopen it: TOKINT must ask for the passphrase again
    and restore saved settings/recents after unlocking. Wrong passphrases are rejected.
+   Existing vaults keep their original passphrase when the extension is updated.
 7. Alchemy features require the reviewer's own optional endpoint. Do not include
    a publisher API key in review notes or the uploaded package.
 
 The automated browser fixtures cover sandboxed HTML and local converters without
 requiring a live token to remain unchanged. See [verification](../VERIFICATION.md).
 
+For the Art Blocks regression, inspect
+`0x059edd72cd353df5106d2b9cc5ab83a52287ac3a 5603`. Allow the metadata and artwork
+destination hosts when prompted. The inspector preserves the legacy metadata URI
+and shows the direct metadata URL; the image preview loads from the direct storage
+host. HTTP redirect following remains disabled. Other Art Blocks contracts and
+cross-token metadata references are outside this compatibility mapping.
+
 ## Published supporting pages and source
 
 - Privacy policy: https://c0ncep7.github.io/tokint/public/privacy.html
 - Support: https://github.com/c0ncep7/tokint/issues
-- Corresponding 1.0.1 source: https://github.com/c0ncep7/tokint/releases/download/v1.0.1/tokint-1.0.1-source.zip
-- Release and checksums: https://github.com/c0ncep7/tokint/releases/tag/v1.0.1
+- Earlier published 1.0.1 source: https://github.com/c0ncep7/tokint/releases/download/v1.0.1/tokint-1.0.1-source.zip
+- Earlier release and checksums: https://github.com/c0ncep7/tokint/releases/tag/v1.0.1
 
 The vault addresses the earlier unencrypted-storage finding. See `src/vault-crypto.ts`,
 `src/vault.ts`, `src/token-cache.ts`, and the migration/restart tests. Browser history,
@@ -131,6 +149,6 @@ These implementation checks are not a claim of Google approval.
   screenshots, and distribution choices.
 - Host `public/privacy.html` at a public HTTPS URL, set the listing's support
   contact referenced by that policy, and enter the privacy URL in the dashboard.
-- Include the corresponding source link above in the store description or support page.
+- Include the source link matching the uploaded binary in the store description or support page.
 - See [verification](../VERIFICATION.md) for the completed release checks.
 - Review final dashboard answers and upload the store ZIP. Packaging does not submit it.

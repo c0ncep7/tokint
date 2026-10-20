@@ -28,6 +28,11 @@ All artifacts are under `releases/<version>/`. Packaging validates entry points
 and required legal/privacy files; it does not run the test suites or publish
 anything. Review [VERIFICATION.md](VERIFICATION.md) for actual test results.
 
+Rebuild after documentation changes so the installed policy and distribution
+notes match the source. Regenerate release archives after changing code or
+documentation; an unpacked build does not update existing ZIPs or public downloads.
+Publish the matching source, binary, checksums, and public privacy policy together.
+
 ## Matching source and notices
 
 Publish the matching source archive with every binary release, keep it available

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { CID } from 'multiformats/cid';
-import { address, contentUrl, DEFAULTS, explorer, formatMetadata, httpUrl, imageDataUri, ipfsUrl, LatestRequest, MAX_METADATA, MAX_UINT256, parseIpfs, parseMetadata, parseQuery, readDataJson, resolveUri, settings, substituteId, tokenId } from '../src/core';
+import { address, contentUrl, DEFAULTS, explorer, formatMetadata, httpUrl, imageDataUri, ipfsUrl, LatestRequest, MAX_METADATA, MAX_UINT256, parseIpfs, parseMetadata, parseQuery, readDataJson, resolveMetadataUri, resolveUri, settings, substituteId, tokenId } from '../src/core';
 
 const DWEB = { ...DEFAULTS, gatewayUrl: 'https://dweb.link', gatewayStyle: 'subdomain' as const };
 const contract = '0x0000000000000000000000000000000000000001';
@@ -25,6 +25,47 @@ test('Arweave transaction URLs use their deterministic sandbox and preserve reso
   ]) assert.equal(contentUrl(url), url);
   assert.throws(() => contentUrl(`http://arweave.net/${id}`), /HTTPS/);
   assert.throws(() => contentUrl(`https://user:pass@arweave.net/${id}`), /HTTPS/);
+});
+test('original Art Blocks metadata skips both legacy redirects and preserves URL parameters', () => {
+  const core = '0x059edd72cd353df5106d2b9cc5ab83a52287ac3a';
+  const direct = `https://token.artblocks.io/1/${core}/5603`;
+  for (const legacy of ['https://api.artblocks.io/token/5603', 'https://token.artblocks.io/5603']) {
+    for (const suffix of ['', '/', '?refresh=true#metadata']) {
+      assert.equal(resolveMetadataUri(legacy + suffix, DEFAULTS, core.toUpperCase(), 5603n), direct + (suffix === '/' ? '' : suffix));
+    }
+  }
+  assert.equal(resolveMetadataUri(direct, DEFAULTS, core, 5603n), direct);
+  for (const uri of [
+    'https://api.artblocks.io/token/5604', 'https://token.artblocks.io/5604',
+    'https://api.artblocks.io/token/5603/image', 'https://api.artblocks.io/project/0',
+    'https://api.artblocks.io:8443/token/5603', 'https://token.artblocks.io:8443/5603',
+    'https://api.artblocks.io.example/token/5603', 'https://other.artblocks.io/token/5603',
+    'https://api.artblocks.io/token/5.603', 'https://api.artblocks.io/token/%35%36%30%33',
+    `https://token.artblocks.io/1/${contract}/5603`, 'data:application/json,{}',
+  ]) assert.equal(resolveMetadataUri(uri, DEFAULTS, core, 5603n), uri);
+  const legacy = 'https://api.artblocks.io/token/5603';
+  assert.equal(resolveMetadataUri(legacy, DEFAULTS, contract, 5603n), legacy);
+  assert.equal(resolveMetadataUri(`ipfs://${cid0}/meta.json`, DWEB, core, 5603n), resolveUri(`ipfs://${cid0}/meta.json`, DWEB));
+  assert.throws(() => resolveMetadataUri('http://api.artblocks.io/token/5603', DEFAULTS, core, 5603n), /HTTPS/);
+});
+test('original Art Blocks PNGs resolve to their direct storage host without rewriting other media', () => {
+  const core = '0x059edd72cd353df5106d2b9cc5ab83a52287ac3a';
+  for (const id of ['5603', '1000000']) {
+    for (const source of ['https://media-proxy.artblocks.io', 'https://core-api.artblocks.io/media']) {
+      assert.equal(contentUrl(`${source}/1/${core}/${id}.png?download=1#image`), `https://artblocks-mainnet.s3.amazonaws.com/${id}.png?download=1#image`);
+    }
+  }
+  for (const url of [
+    `https://media-proxy.artblocks.io/1/${contract}/5603.png`,
+    `https://media-proxy.artblocks.io/42161/${core}/5603.png`,
+    `https://media-proxy.artblocks.io/1/${core}/5603.svg`,
+    `https://media-proxy.artblocks.io/1/${core}/5603.png/extra`,
+    `https://media-proxy.artblocks.io:8443/1/${core}/5603.png`,
+    `https://media-proxy.artblocks.io.example/1/${core}/5603.png`,
+    `https://core-api.artblocks.io/other/1/${core}/5603.png`,
+    `https://generator.artblocks.io/1/${core}/5603`,
+    'https://artblocks-mainnet.s3.amazonaws.com/5603.png',
+  ]) assert.equal(contentUrl(url), url);
 });
 test('address commands route to Read Contract', () => {
   assert.deepEqual(parseQuery(`  ${contract} `), { kind: 'contract', contract });

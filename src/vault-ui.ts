@@ -1,5 +1,5 @@
 import { migrateTokenCache } from './token-cache';
-import { lockVault, migratePreferences, openVault, SESSION_KEY, vaultHeader, vaultIsUnlocked } from './vault';
+import { lockVault, migratePreferences, MIN_PASSPHRASE_LENGTH, openVault, SESSION_KEY, vaultHeader, vaultIsUnlocked } from './vault';
 
 export async function ensureVault(): Promise<void> {
   chrome.storage.onChanged.addListener((changes, area) => {
@@ -13,9 +13,9 @@ export async function ensureVault(): Promise<void> {
   dialog.innerHTML = `<form id="vault-form">
     <h1 id="vault-title">${existing ? 'Unlock TOKINT' : 'Protect your saved data'}</h1>
     <p>${existing ? 'Enter your passphrase to unlock this Chrome session.' : 'Choose a passphrase to encrypt your settings, recent tokens, and cached artwork on this device.'}</p>
-    <label>Passphrase<input id="vault-passphrase" type="password" minlength="12" maxlength="1024" required autocomplete="${existing ? 'current-password' : 'new-password'}"></label>
-    ${existing ? '' : '<label>Confirm passphrase<input id="vault-confirm" type="password" minlength="12" maxlength="1024" required autocomplete="new-password"></label>'}
-    <p class="field-help">Use at least 12 characters. Your passphrase is never saved or sent to a server. There is no recovery: if you forget it, remove and reinstall TOKINT to reset its saved data.</p>
+    <label>Passphrase<input id="vault-passphrase" type="password" minlength="${MIN_PASSPHRASE_LENGTH}" maxlength="1024" required autocomplete="${existing ? 'current-password' : 'new-password'}"></label>
+    ${existing ? '' : `<label>Confirm passphrase<input id="vault-confirm" type="password" minlength="${MIN_PASSPHRASE_LENGTH}" maxlength="1024" required autocomplete="new-password"></label>`}
+    <p class="field-help">Use at least ${MIN_PASSPHRASE_LENGTH} characters. Your passphrase is never saved or sent to a server. There is no recovery: if you forget it, remove and reinstall TOKINT to reset its saved data.</p>
     <button class="primary" type="submit">${existing ? 'Unlock' : 'Create encrypted vault'}</button>
     <p id="vault-status" role="status" aria-live="polite"></p>
   </form>`;

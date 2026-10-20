@@ -50,10 +50,13 @@ export function permissionPattern(url: string): string {
   const u = httpUrl(url);
   return `${u.protocol}//${u.hostname}/*`;
 }
-/** Resolve Arweave's deterministic transaction sandbox before fetching content.
+const ART_BLOCKS_ORIGINAL_CORE = '0x059edd72cd353df5106d2b9cc5ab83a52287ac3a';
+/** Resolve known direct content routes before fetching.
+ * Arweave's deterministic transaction sandbox:
  * https://docs.ar.io/build/advanced/sandboxing/
- * Only the public gateway's transaction route is rewritten; RPC/API routes,
- * custom gateways and already-isolated subdomains retain their original URL.
+ * Original Art Blocks core PNGs: the media proxy redirects via core-api to
+ * artblocks-mainnet.s3.amazonaws.com/<token-ID>.png (verified 2026-10-20).
+ * Other routes, contracts, formats and custom hosts retain their original URL.
  */
 export function contentUrl(value: string): string {
   const url = httpUrl(value);
@@ -65,6 +68,15 @@ export function contentUrl(value: string): string {
         url.hostname = `${base32.encode(bytes).slice(1)}.arweave.net`;
       }
     } catch { /* Malformed transaction IDs are left for the gateway to reject. */ }
+  }
+  if (url.protocol === 'https:' && !url.port) {
+    const mediaPath = url.hostname === 'media-proxy.artblocks.io' ? url.pathname
+      : url.hostname === 'core-api.artblocks.io' && url.pathname.startsWith('/media/') ? url.pathname.slice(6) : '';
+    const media = mediaPath.match(/^\/1\/(0x[0-9a-f]{40})\/(0|[1-9]\d{0,77})\.png$/i);
+    if (media?.[1].toLowerCase() === ART_BLOCKS_ORIGINAL_CORE) {
+      url.hostname = 'artblocks-mainnet.s3.amazonaws.com';
+      url.pathname = `/${media[2]}.png`;
+    }
   }
   return url.href;
 }
@@ -109,6 +121,24 @@ export function resolveUri(value: string, prefs: Settings, base?: string): strin
     return httpUrl(new URL(raw, base).href).href;
   }
   throw new Failure('input', 'This URI scheme is not supported. Use IPFS, HTTPS, embedded data, or HTTP on a loopback host.');
+}
+/** The original Art Blocks core still returns legacy URLs with two redirects.
+ * Use the documented chain/contract/token route for that core's matching token.
+ * https://docs.artblocks.io/developer/token-and-generator-apis/
+ * Keep other contracts and cross-token references unchanged.
+ */
+export function resolveMetadataUri(value: string, prefs: Settings, contract: string, id: bigint): string {
+  const resolved = resolveUri(value, prefs);
+  if (contract.toLowerCase() !== ART_BLOCKS_ORIGINAL_CORE || !resolved.startsWith('https:')) return resolved;
+  const url = new URL(resolved);
+  if (url.port) return resolved;
+  const legacyId = url.hostname === 'api.artblocks.io' ? url.pathname.match(/^\/token\/(\d{1,78})\/?$/)?.[1]
+    : url.hostname === 'token.artblocks.io' ? url.pathname.match(/^\/(\d{1,78})\/?$/)?.[1] : undefined;
+  if (legacyId !== undefined && BigInt(legacyId) === id) {
+    url.hostname = 'token.artblocks.io';
+    url.pathname = `/1/${contract.toLowerCase()}/${id}`;
+  }
+  return url.href;
 }
 export function substituteId(value: string, id: bigint): string { return value.replaceAll('{id}', id.toString(16).padStart(64, '0')); }
 export function explorer(contract: string): string { return `https://etherscan.io/address/${address(contract)}#readContract`; }

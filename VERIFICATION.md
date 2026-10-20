@@ -3,6 +3,44 @@
 Updated: 2026-10-20 for version **1.0.1**. These are implementation and test
 results, not Chrome Web Store approval. Earlier dated results remain below as history.
 
+## Passphrase minimum and documentation: 2026-10-20
+
+- Creation and unlock accept **6–1024 characters**. Empty and whitespace-only
+  input is rejected. The form fields, help text and runtime validation share the
+  six-character minimum; confirmation is required when creating a vault.
+  Existing vaults continue to require their original passphrase.
+- `npm run check` passed with strict TypeScript, **139 unit tests**, and the
+  production build. `npm run test:vault` passed **4 browser checks** in disposable
+  Chrome for Testing **153.0.8010.12** profiles, covering five-character rejection,
+  six-character creation/unlock, migration, a full browser restart, incorrect
+  passphrases, and locking across tabs.
+- README, privacy policy and publishing guide document the current bounds,
+  Art Blocks routing, destination permissions, and focused test commands.
+  The earlier complete release-suite results below remain dated evidence;
+  the complete suite was not rerun for the passphrase change.
+- These follow-up changes are built locally. Published 1.0.1 archives and hosted
+  policy have not been updated as part of this work.
+
+## Art Blocks redirect fix: 2026-10-20
+
+- The original Art Blocks contract's token 5603 returns
+  `https://api.artblocks.io/token/5603`, which redirects twice before reaching
+  `https://token.artblocks.io/1/0x059edd72cd353df5106d2b9cc5ab83a52287ac3a/5603`.
+  Matching legacy metadata routes now resolve directly using the inspected
+  contract and token ID. Other contracts and cross-token references stay unchanged.
+- Its PNG media proxy also redirects twice, ending at
+  `https://artblocks-mainnet.s3.amazonaws.com/5603.png`. Original-core PNG routes
+  now use that storage host directly for previews and original downloads.
+  Destination permissions remain required; no manifest grants were added and
+  automatic redirect following remains blocked.
+- TypeScript, **138 unit tests**, the build, **44 inspector browser checks**, the
+  real-server security suite, and the new Art Blocks browser regression passed.
+  The latter checks denied destination access, preserved source links, and both
+  metadata/media redirect chains in disposable profiles.
+- A live Chrome for Testing **153.0.8010.12** lookup loaded **Chromie Squiggle #5603**
+  and its **2400 × 1600** PNG using only the direct content destinations. The
+  screenshot was inspected. Reload the unpacked extension to apply this build.
+
 ## 1.0.1 release checks: 2026-10-20
 
 - `npm run test:release` passed: strict TypeScript, **134 unit tests**, production
@@ -149,10 +187,15 @@ unknown vulnerabilities or a substitute for a fresh audit at publication time.
 
 Privacy hosting: https://c0ncep7.github.io/tokint/public/privacy.html.
 Release/source distribution: https://github.com/c0ncep7/tokint/releases/tag/v1.0.1.
-The matching source archive and checksums must remain accessible with this binary.
+These links refer to the earlier publication, before the Art Blocks and
+passphrase follow-ups. The archive hashes and full release checks recorded for
+that publication do not describe the current working tree.
 
+- Run the full release checks for the source being published, regenerate the
+  binary/source archives and checksums, and deploy the updated public policy.
+  Keep the matching source archive and checksums accessible with the binary.
 - Review the final listing/privacy answers in `docs/WEB_STORE.md`, public contact,
-  distribution choices and approved promotional images; upload the **1.0.1** store ZIP.
+  distribution choices and approved promotional images; upload the matching store ZIP.
 - Submit for Google review. The isolated HTML-artwork remote-code declaration
   remains subject to that review. No store upload or submission was performed here.
 

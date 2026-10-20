@@ -42,6 +42,22 @@ test('vault migrates plaintext preferences, never persists its key, and locks af
   assert.equal(await readPrivate('lastContract'), 'private-fixture-contract');
 });
 
+test('vault accepts six-character passphrases for creation and unlock while rejecting invalid lengths', async () => {
+  const fixture = storageFixture();
+  for (const invalid of ['', 'short', '      ', 'x'.repeat(1025)]) {
+    await assert.rejects(openVault(invalid, migratePreferences), /6–1024 characters/);
+  }
+  assert.equal(fixture.local.vaultHeader, undefined);
+  assert.equal(fixture.session[SESSION_KEY], undefined);
+  await openVault('vault6', migratePreferences);
+  await writePrivate('theme', 'dark');
+  await lockVault();
+  await assert.rejects(openVault('wrong6', migratePreferences), /Incorrect passphrase/);
+  assert.equal(fixture.session[SESSION_KEY], undefined);
+  await openVault('vault6', migratePreferences);
+  assert.equal(await readPrivate('theme'), 'dark');
+});
+
 test('failed migration does not publish an unlocked session and can be retried', async () => {
   const fixture = storageFixture({ lastContract: 'migration-fixture' });
   await assert.rejects(openVault(TEST_PASSPHRASE, async () => { throw new Error('Quota fixture'); }), /Quota fixture/);

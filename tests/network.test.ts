@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { Failure } from '../src/core';
+import { DEFAULTS, Failure, resolveMetadataUri } from '../src/core';
 import { loadImage, loadMedia, loadMetadata, loadPreview, PREVIEW_BYTES, requestBytes, type NetworkOptions } from '../src/network';
 const permitted = async () => true;
 const mock = (response: Response): NetworkOptions => ({ permitted, fetcher: async () => response });
@@ -30,6 +30,49 @@ test('Arweave metadata and original media request the direct sandbox with destin
   }), (e: unknown) => e instanceof Failure && e.kind === 'permission' && e.origin === `https://${host}/*`);
   await requestBytes(url, 'rpc', 1000, { permitted, fetcher: async input => {
     assert.equal(input, url); return Response.json({ result: '0x1' });
+  } }, { method: 'POST', body: '{}' });
+});
+test('Art Blocks checks canonical destination access before fetching and still rejects redirects', async () => {
+  const url = resolveMetadataUri('https://api.artblocks.io/token/5603', DEFAULTS, '0x059edd72cd353df5106d2b9cc5ab83a52287ac3a', 5603n);
+  const requests: string[] = [];
+  const opts: NetworkOptions = {
+    permitted: async origin => { assert.equal(origin, 'https://token.artblocks.io/*'); return false; },
+    fetcher: async (input, init) => {
+      requests.push(String(input));
+      assert.equal(init?.redirect, 'manual');
+      assert.equal(init?.credentials, 'omit');
+      assert.equal(init?.referrerPolicy, 'no-referrer');
+      return Response.json({ name: 'Chromie Squiggle #5603' });
+    },
+  };
+  await assert.rejects(loadMetadata(url, opts), (e: unknown) => e instanceof Failure && e.kind === 'permission' && e.origin === 'https://token.artblocks.io/*');
+  assert.deepEqual(requests, []);
+  const metadata = await loadMetadata(url, { ...opts, permitted });
+  assert.equal(metadata.data.name, 'Chromie Squiggle #5603');
+  assert.equal(metadata.url, url);
+  assert.deepEqual(requests, [url]);
+  await assert.rejects(loadMetadata(url, mock(new Response(null, { status: 302, headers: { Location: 'https://unapproved.example/' } }))), /redirects are blocked/);
+});
+test('Art Blocks previews and originals check storage access and skip media redirect chains', async () => {
+  const source = 'https://media-proxy.artblocks.io/1/0x059edd72cd353df5106d2b9cc5ab83a52287ac3a/5603.png';
+  const requests: string[] = [];
+  let granted = false;
+  const opts: NetworkOptions = {
+    permitted: async origin => { assert.equal(origin, 'https://artblocks-mainnet.s3.amazonaws.com/*'); return granted; },
+    fetcher: async (input, init) => {
+      requests.push(String(input));
+      assert.equal(init?.redirect, 'manual');
+      return new Response('PNG bytes', { headers: { 'Content-Type': 'image/png' } });
+    },
+  };
+  await assert.rejects(loadPreview(source, opts), (e: unknown) => e instanceof Failure && e.kind === 'permission' && e.origin === 'https://artblocks-mainnet.s3.amazonaws.com/*');
+  assert.deepEqual(requests, []);
+  granted = true;
+  assert.equal(await (await loadPreview(source, opts)).text(), 'PNG bytes');
+  assert.equal(await (await loadMedia(source, opts)).text(), 'PNG bytes');
+  assert.deepEqual(requests, Array(2).fill('https://artblocks-mainnet.s3.amazonaws.com/5603.png'));
+  await requestBytes(source, 'rpc', 1000, { permitted, fetcher: async input => {
+    assert.equal(input, source); return Response.json({ result: '0x1' });
   } }, { method: 'POST', body: '{}' });
 });
 test('missing permission stops network access and identifies the host grant', async () => {

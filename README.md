@@ -38,7 +38,7 @@ Use Chrome, Brave, or another Chromium browser that supports unpacked Manifest V
 
 The supplied build needs no Node.js installation. Settings are available from the inspector's gear icon or the browser's extension management page.
 
-**First use:** create a local unlock passphrase of at least 12 characters. Keep it somewhere safe; there is no recovery. Unlock once each Chrome session to use your saved settings and tokens.
+**First use:** create and confirm a local unlock passphrase of **6–1024 characters**. Keep it somewhere safe; there is no recovery. Unlock once each Chrome session to use your saved settings and tokens.
 
 The manual-install ZIP, `tokint-<version>.zip`, contains `extension/`; extract it before choosing **Load unpacked**. The separate `tokint-<version>-chrome-web-store.zip` is for store submission, and the source ZIP is for development.
 
@@ -67,6 +67,15 @@ files, and your browser performs display and conversion. For `https://arweave.ne
 content, TOKINT calculates the transaction-specific subdomain and requests it directly,
 including for artwork and original downloads. This supports Arweave's standard
 [sandbox routing](https://docs.ar.io/build/advanced/sandboxing/) without an HTTP redirect.
+For the original Art Blocks contract (`0x059edd72cd353df5106d2b9cc5ab83a52287ac3a`),
+matching legacy metadata URLs use the
+[chain/contract/token endpoint](https://docs.artblocks.io/developer/token-and-generator-apis/)
+on `token.artblocks.io` directly, and its PNG media proxy URLs resolve to
+`artblocks-mainnet.s3.amazonaws.com` for previews and original downloads.
+Both hosts require optional access; use **Allow and retry** when prompted.
+For example, Chromie Squiggle #5603 loads without following its legacy redirect
+chains. The original metadata URI remains visible. Other contracts and
+cross-token metadata references retain their original routing.
 
 The inspector shows the original metadata URI, resolved URL, JSON, attributes, and image preview. JSON is normally indented; large or deeply nested objects use compact formatting to keep display memory bounded. Metadata deeper than 64 object/array levels is rejected. Use the copy and external-link controls to inspect sources. The contract link opens Etherscan's Read Contract page. When metadata provides multiple distinct assets, the Media source dropdown in the preview footer switches between `image`, `animation_url`, `image_url`, inline SVG `image_data`, other media aliases, and `properties.files` entries. Duplicate media values share one entry; the selector is hidden when only one distinct value remains. The selected asset drives the preview, storage badge, source link, original download, and conversion tools. Animated image formats work from any of these fields. Base64 HTML animations also preview in an isolated sandbox. Audio and video remain outbound links. The OpenSea and OnChainChecker logos beneath the media open the submitted token on each service in a new tab. Both logos are bundled locally; the services are contacted only when you follow a link.
 
@@ -148,7 +157,18 @@ Open Settings with the inspector's gear icon. Click **Save settings** to apply c
 
 **Restore defaults** fills the form; click **Save settings** to apply it. Theme is changed separately with the sun/moon button. Clearing Recents removes history and cached files without changing settings.
 
-RPC and content requests use direct URLs. Arweave transaction URLs are resolved to their deterministic sandbox subdomains before content is fetched. Other automatic HTTP redirects are blocked before contacting their destinations. If a provider or path-style gateway redirects, use its direct endpoint, choose another gateway/style, or follow the source link in a normal browser tab. The extension does not silently switch providers.
+RPC and content requests use direct URLs. Arweave transaction URLs and the original Art Blocks contract's legacy metadata/PNG routes resolve to known direct destinations before content is fetched. Automatic HTTP redirects are blocked before contacting their destinations. If a provider or path-style gateway redirects, use its direct endpoint, choose another gateway/style, or follow the source link in a normal browser tab. The extension does not silently switch providers.
+
+### Unlock saved data
+
+At first use, enter and confirm a passphrase of **6–1024 characters**. Empty or
+whitespace-only values are rejected. The same passphrase unlocks your saved
+settings and cache after **Lock saved data**, a full browser exit, or an extension
+reload. Closing a window alone may leave Chrome running.
+
+Existing vaults continue to use the passphrase chosen when they were created.
+Lowering the minimum does not change that passphrase. There is no passphrase-change
+or recovery control; removing and reinstalling the extension resets its saved data.
 
 ## Optional Alchemy features
 
@@ -233,9 +253,9 @@ token-cache snapshots ineligible for reuse.
 
 Read the [privacy policy](public/privacy.html) for local storage, retention, third-party requests, and deletion details. [PRIVACY.md](PRIVACY.md) explains how to publish its public URL for the store listing; [Web Store submission notes](docs/WEB_STORE.md) provide permission justifications, privacy declarations, and the sandbox explanation for reviewers.
 
-Settings, the last contract, theme, recent-token identities, metadata and cached artwork are encrypted in local browser storage with AES-256-GCM. At first use, create and confirm a passphrase of at least 12 characters. PBKDF2-HMAC-SHA-256 (600,000 iterations, random salt) derives the keys. TOKINT never saves or transmits the passphrase; derived keys live only in trusted-context Chrome session storage. **Settings → Lock saved data**, quitting Chrome completely, or reloading/disabling/updating the extension clears the keys. Unlocking restores saved data. There is no recovery; remove and reinstall TOKINT to reset a forgotten passphrase. Browser history, downloads and clipboard contents are outside the vault. Providers receive the RPC/content requests you submit. There are no analytics, wallet connections, signing requests, content scripts, or background polling. Toolbar detection uses temporary `activeTab` access and reads the clicked tab's URL without fetching or injecting into its page.
+Settings, the last contract, theme, recent-token identities, metadata and cached artwork are encrypted in local browser storage with AES-256-GCM. At first use, create and confirm a passphrase of 6–1024 characters. PBKDF2-HMAC-SHA-256 (600,000 iterations, random salt) derives the keys. TOKINT never saves or transmits the passphrase; derived keys live only in trusted-context Chrome session storage. **Settings → Lock saved data**, quitting Chrome completely, or reloading/disabling/updating the extension clears the keys. Unlocking restores saved data. There is no recovery; remove and reinstall TOKINT to reset a forgotten passphrase. Browser history, downloads and clipboard contents are outside the vault. Providers receive the RPC/content requests you submit. There are no analytics, wallet connections, signing requests, content scripts, or background polling. Toolbar detection uses temporary `activeTab` access and reads the clicked tab's URL without fetching or injecting into its page.
 
-TOKINT requests storage, `activeTab`, and host access for PublicNode, Pinata, and Arweave. OpenSea toolbar detection needs no permanent OpenSea host permission. Other HTTPS hosts and the literal HTTP loopback hosts `localhost` and `127.0.0.1` are optional. Remote plain-HTTP RPC, metadata, media, and gateway requests are rejected; use a direct HTTPS endpoint. **Allow and retry** requests access after a user click; declining leaves source links available. Revoke optional access through the browser's extension management page. Requests omit cookies and referrers. Arweave transaction content is requested directly from its calculated sandbox subdomain, with host access checked for that destination. HTTP redirects, including same-host redirects, are blocked before following them; outbound links use the browser's normal navigation behavior. See [verification notes](VERIFICATION.md) for the tested security boundaries.
+TOKINT requests storage, `activeTab`, and host access for PublicNode, Pinata, and Arweave. OpenSea toolbar detection needs no permanent OpenSea host permission. Other HTTPS hosts and the literal HTTP loopback hosts `localhost` and `127.0.0.1` are optional. Remote plain-HTTP RPC, metadata, media, and gateway requests are rejected; use a direct HTTPS endpoint. **Allow and retry** requests access after a user click; declining leaves source links available. Revoke optional access through the browser's extension management page. Requests omit cookies and referrers. Arweave transaction content and supported Art Blocks legacy routes resolve to direct destinations, with host access checked for each destination before fetching. HTTP redirects, including same-host redirects, are blocked before following them; outbound links use the browser's normal navigation behavior. See [verification notes](VERIFICATION.md) for the tested security boundaries.
 
 | Error | Suggested action |
 | --- | --- |
@@ -285,7 +305,13 @@ npm run package:store
 
 Packaging checks the store manifest version and required entry points and legal/privacy files. It uses Node.js without a system archive tool. Entries have fixed timestamps and stable ordering; unchanged inputs on the same toolchain produce identical archives. Repeating the command replaces that version's local artifacts. Packaging does not publish or run browser tests.
 
-Download the [1.0.1 corresponding source archive](https://github.com/c0ncep7/tokint/releases/download/v1.0.1/tokint-1.0.1-source.zip) or view [the release and checksums](https://github.com/c0ncep7/tokint/releases/tag/v1.0.1). The [public privacy policy](https://c0ncep7.github.io/tokint/public/privacy.html) matches the bundled policy.
+The earlier published 1.0.1 build has a [corresponding source archive](https://github.com/c0ncep7/tokint/releases/download/v1.0.1/tokint-1.0.1-source.zip)
+and [release checksums](https://github.com/c0ncep7/tokint/releases/tag/v1.0.1).
+The Art Blocks fix and six-character minimum are subsequent local changes;
+those archives have not been regenerated or published for these changes.
+Publish the updated [privacy policy](public/privacy.html) to its
+[public URL](https://c0ncep7.github.io/tokint/public/privacy.html) with the matching
+release. See [verification](VERIFICATION.md) for the recorded build and release status.
 
 TOKINT is licensed under **GPL-2.0-only**; see [LICENSE](LICENSE) and [distribution requirements](DISTRIBUTION.md). Make the matching source archive available alongside each binary release. Before submission, publish the [privacy policy](public/privacy.html) at a public HTTPS URL, complete the listing and reviewer fields in [docs/WEB_STORE.md](docs/WEB_STORE.md), and perform the separate real-world release checks in [VERIFICATION.md](VERIFICATION.md).
 
@@ -305,14 +331,16 @@ Browser tests use temporary profiles and local fixtures, with output under `test
 | `npm run build` | Unpacked extension, licenses/privacy policy, notices, and checksums |
 | `npm run package:store` / `npm run release` | Rebuild and package store/manual ZIPs, corresponding source, documentation, report, and checksums |
 | `npm run test:offline` | Local JPEG/WebP/GIF conversion with external requests blocked, WASM optimization, and unavailable browser capabilities |
-| `npm run test:browser` | Inspector, conversion, cache, and Alchemy browser suites |
+| `npm run test:browser` | Inspector, Art Blocks redirect/permission regression, media, conversion, cache, and Alchemy browser suites |
+| `node scripts/artblocks-browser-test.mjs` | Focused Art Blocks metadata/artwork regression with local fixtures and destination permissions |
+| `node scripts/artblocks-browser-test.mjs --live` | Optional live Chromie Squiggle #5603 metadata/artwork lookup in disposable profiles; requires network access |
 | `npm run test:config` | Settings, gateway configuration, and URL validation |
 | `npm run test:opensea` | Actual toolbar actions, including generic token URLs |
 | `npm run test:cache` / `npm run test:alchemy` | Focused browser suites |
-| `npm run test:live` | Optional read-only mainnet and IPFS checks; requires network access |
-| `npm run test:vault` | First-use confirmation, legacy plaintext migration, ciphertext inspection, full browser restart, wrong-passphrase rejection and cross-tab locking |
+| `npm run test:live` | Optional read-only Loot #1, The Memes #410, Chromie Squiggle #5603, and BAYC #1 metadata checks; requires network access |
+| `npm run test:vault` | Five-character rejection, six-character creation/unlock, confirmation, legacy migration, ciphertext inspection, full browser restart, wrong-passphrase rejection, and cross-tab locking |
 | `npm run test:security` | Real-browser redirect consent, RPC POST isolation, metadata resource bounds, and preview limits |
-| `npm run test:release` | Typecheck, units, build, and all standard browser suites including offline conversion and security |
+| `npm run test:release` | Typecheck, units, build, and all standard browser suites including Art Blocks, offline conversion, security, and vault checks; excludes optional live checks |
 
 Run `npm audit` with registry access before each release; use `npm outdated` when planning dependency updates. All declared dependencies are used; `gifsicle-wasm-browser` is pinned because the build extracts its embedded runtime. See [VERIFICATION.md](VERIFICATION.md) for actual results and outstanding checks.
 
@@ -335,7 +363,8 @@ Update this README in the same change as any user-visible feature, setting,
 permission, limit, or release command. Check core lookup behavior against
 `src/core.ts`, `src/chain.ts`, and `src/results.ts`; Alchemy behavior against
 `src/alchemy.ts`, `src/alchemy-ui.ts`, and `src/rpc-presets.ts`; UI labels against
-`public/results.html` and `public/options.html`; and development commands against
+`public/results.html` and `public/options.html`; vault behavior and passphrase
+limits against `src/vault.ts` and `src/vault-ui.ts`; and development commands against
 `package.json`. Changes to data handling also need matching updates to the privacy
 policy and Web Store declarations. Regenerate release packages after documentation
 changes so their source archive contains the current README.

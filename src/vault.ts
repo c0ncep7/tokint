@@ -1,6 +1,7 @@
 import { base64, deriveVaultKeys, importVaultKeys, isSealed, sealJson, unbase64, unsealJson, VAULT_ITERATIONS, type Sealed, type VaultHeader, type VaultKeys } from './vault-crypto';
 
 export const SESSION_KEY = 'tokintVaultSession';
+export const MIN_PASSPHRASE_LENGTH = 6;
 // chrome.storage serializes JSON, so binary ciphertext must be encoded there.
 type JsonSealed = Omit<Sealed, 'ciphertext'> & { ciphertext: string };
 type StoredHeader = Omit<VaultHeader, 'check'> & { check: JsonSealed };
@@ -23,8 +24,8 @@ export async function vaultIsUnlocked(): Promise<boolean> {
 }
 export async function lockVault() { await chrome.storage.session.remove(SESSION_KEY); }
 export async function openVault(passphrase: string, migrate: (keys: VaultKeys) => Promise<void>) {
-  if (passphrase.length < 12 || passphrase.length > 1024 || !passphrase.trim()) {
-    throw new Error('Use a passphrase of 12–1024 characters.');
+  if (passphrase.length < MIN_PASSPHRASE_LENGTH || passphrase.length > 1024 || !passphrase.trim()) {
+    throw new Error(`Use a passphrase of ${MIN_PASSPHRASE_LENGTH}–1024 characters.`);
   }
   await navigator.locks.request('tokint-vault-unlock', async () => {
     let header = await vaultHeader();

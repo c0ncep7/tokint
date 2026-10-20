@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 import { mkdtemp, mkdir, rm } from 'node:fs/promises';
 import path from 'node:path';
-import { TEST_PASSPHRASE } from './vault-browser-helpers.mjs';
+// Six-character disposable fixture exercises the minimum on creation and unlock.
+const TEST_PASSPHRASE = 'vault6';
 await mkdir('test-results', { recursive: true });
 const profile = await mkdtemp(path.resolve('test-results/vault-profile-'));
 const launch = () => chromium.launchPersistentContext(profile, {
@@ -20,6 +21,14 @@ try {
   const page = await context.newPage();
   await page.goto(`${root}/options.html`);
   await page.locator('#vault-confirm').waitFor();
+  for (const id of ['vault-passphrase', 'vault-confirm']) {
+    assert.equal(await page.locator(`#${id}`).getAttribute('minlength'), '6');
+    await page.locator(`#${id}`).pressSequentially('short');
+  }
+  await page.getByRole('button', { name: 'Create encrypted vault' }).click();
+  assert.equal(await page.locator('#vault-passphrase').evaluate(input => input.validity.tooShort), true);
+  assert.equal(await page.evaluate(async () => (await chrome.storage.local.get('vaultHeader')).vaultHeader), undefined);
+  pass('five-character passphrases are rejected before creating a vault');
   const fixture = {
     settings: { rpcUrl: 'https://rpc.example.invalid/vault-private-fixture', gatewayUrl: 'https://gateway.pinata.cloud', gatewayStyle: 'path' },
     lastContract: '0x0000000000000000000000000000000000000001',
@@ -64,7 +73,7 @@ try {
   assert.equal(stored.local.settings.sealed, 1);
   assert.ok(stored.session.tokintVaultSession.material);
   assert.ok(!JSON.stringify(stored.local).includes(stored.session.tokintVaultSession.material));
-  pass('first-run confirmation and migration encrypt settings, last contract, theme, metadata, media, and cache identities');
+  pass('six-character first-run confirmation and migration encrypt settings, last contract, theme, metadata, media, and cache identities');
   const read = async target => target.evaluate(async () => {
     const storage = await import(chrome.runtime.getURL('storage.js'));
     const cache = await import(chrome.runtime.getURL('token-cache.js'));
@@ -92,7 +101,7 @@ try {
   assert.deepEqual(restored.settings, fixture.settings);
   assert.equal(restored.lastContract, fixture.lastContract);
   assert.deepEqual(restored.image, [1, 2, 0, 255]);
-  pass('full browser restart loses the key, rejects a wrong passphrase, and restores exact data with the correct one');
+  pass('full browser restart loses the key, rejects a wrong passphrase, and restores exact data with the six-character passphrase');
   const other = await context.newPage(); await other.goto(`${root}/results.html`);
   await other.locator('#contract').waitFor({ state: 'visible' });
   await other.waitForFunction(address => document.querySelector('#contract').value === address, fixture.lastContract);

@@ -3,7 +3,7 @@ import { storageLocation, type StorageLocation } from './storage-location';
 import { createAlchemyUI } from './alchemy-ui';
 import { cacheKey, cacheScope, clearCache, readCache, rememberImage, rememberToken, usableSnapshot, type RecentToken, type Snapshot } from './token-cache';
 import { renderJson } from './json-view';
-import { address, explorer, Failure, formatMetadata, httpUrl, htmlDataUri, imageDataUri, LatestRequest, parseIpfs, resolveUri, substituteId, tokenId, type Method } from './core';
+import { address, explorer, Failure, formatMetadata, httpUrl, htmlDataUri, imageDataUri, LatestRequest, parseIpfs, resolveMetadataUri, resolveUri, substituteId, tokenId, type Method } from './core';
 import { readTokenUri } from './chain';
 import { loadPreview, loadMetadata } from './network';
 import { getLastContract, getSettings, saveLastContract } from './storage';
@@ -298,7 +298,7 @@ async function run(fresh = false) {
     const uri = result.method === 'uri' ? substituteId(result.raw, id) : result.raw;
     const metadataLocation = storageLocation(uri);
     showStorageBadge('metadata', metadataLocation);
-    const resolved = resolveUri(uri, prefs);
+    const resolved = resolveMetadataUri(uri, prefs, contract, id);
     resolvedInput.value = resolved; el<HTMLButtonElement>('copy-resolved').disabled = false;
     if (!resolved.startsWith('data:')) link('metadata-link', httpUrl(resolved).href);
     status('URI resolved. Fetching metadata…', 'loading');

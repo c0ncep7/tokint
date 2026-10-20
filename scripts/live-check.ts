@@ -1,6 +1,6 @@
 import { readTokenUri } from '../src/chain';
 import { loadMetadata } from '../src/network';
-import { DEFAULTS, resolveUri } from '../src/core';
+import { DEFAULTS, resolveMetadataUri, resolveUri } from '../src/core';
 
 // Public, read-only examples. Not part of deterministic npm test runs.
 const network = { permitted: async () => true };
@@ -11,6 +11,11 @@ const memes = await readTokenUri(DEFAULTS.rpcUrl, '0x33fd426905f149f8376e227d0c9
 const arweave = await loadMetadata(resolveUri(memes.raw, DEFAULTS), network);
 if (arweave.data.name !== 'Freedom to Retract' || new URL(arweave.url).hostname !== 'jjlirtdcwoinzdgiv6ydl5orryzviwjbk4gd5zbcxli7psxrufha.arweave.net') throw new Error('Arweave token 410 did not resolve to its expected metadata and sandbox.');
 console.log(`The Memes #410: ${arweave.data.name}; ${memes.method}; direct Arweave metadata loaded.`);
+const artblocksContract = '0x059edd72cd353df5106d2b9cc5ab83a52287ac3a';
+const squiggle = await readTokenUri(DEFAULTS.rpcUrl, artblocksContract, 5603n, 'auto', network);
+const artblocks = await loadMetadata(resolveMetadataUri(squiggle.raw, DEFAULTS, artblocksContract, 5603n), network);
+if (artblocks.data.name !== 'Chromie Squiggle #5603' || artblocks.url !== `https://token.artblocks.io/1/${artblocksContract}/5603`) throw new Error('Art Blocks token 5603 did not resolve to its canonical metadata endpoint.');
+console.log(`Art Blocks #5603: ${artblocks.data.name}; ${squiggle.method}; direct metadata loaded.`);
 const bayc = await readTokenUri(DEFAULTS.rpcUrl, '0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d', 1n, 'auto', network);
 console.log(`BAYC #1 URI: ${bayc.raw}`);
 try {
