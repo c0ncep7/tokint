@@ -1,0 +1,65 @@
+[
+  {
+    "file": "01-inspector-dark-1280x800.jpg",
+    "width": 1280,
+    "height": 800,
+    "format": "JPEG",
+    "mode": "RGB",
+    "bytes": 176954,
+    "sha256": "c2ce78c830e02bb608fbda809599d5a3f56f4adde8dd3f964faedf92740c1a15"
+  },
+  {
+    "file": "02-local-conversion-1280x800.jpg",
+    "width": 1280,
+    "height": 800,
+    "format": "JPEG",
+    "mode": "RGB",
+    "bytes": 96869,
+    "sha256": "33860b0c27a1e3ab3afaaf68cb30b971e3b800b3d34b6e40285d80ffc0622d4e"
+  },
+  {
+    "file": "03-inspector-light-1280x800.jpg",
+    "width": 1280,
+    "height": 800,
+    "format": "JPEG",
+    "mode": "RGB",
+    "bytes": 208883,
+    "sha256": "3ebdf36abbac2d3544ce88841b985e91e46562a74b8cf80dd6e7df65703c90b9"
+  },
+  {
+    "file": "04-html-consent-1280x800.jpg",
+    "width": 1280,
+    "height": 800,
+    "format": "JPEG",
+    "mode": "RGB",
+    "bytes": 197606,
+    "sha256": "efcb8665569843b8341546708370223896fa104f9bd0ab4fe4203a4e6a2ec9a3"
+  },
+  {
+    "file": "marquee-promo-1400x560.jpg",
+    "width": 1400,
+    "height": 560,
+    "format": "JPEG",
+    "mode": "RGB",
+    "bytes": 55826,
+    "sha256": "fa2512462a85e601fe903eec6614c6099b3ee3179bf898ea21e3ca0ba9d63b88"
+  },
+  {
+    "file": "small-promo-440x280.jpg",
+    "width": 440,
+    "height": 280,
+    "format": "JPEG",
+    "mode": "RGB",
+    "bytes": 11693,
+    "sha256": "5cc963fdd9e2499bf3a03dc899b2c6ef2c385e7109746124364d1e4fbcc6e4c7"
+  },
+  {
+    "file": "store-icon-128.png",
+    "width": 128,
+    "height": 128,
+    "format": "PNG",
+    "mode": "RGB",
+    "bytes": 409,
+    "sha256": "3621ffad768c355f07913bc94403f23badb0b8af759644b8cb03f965e2d66173"
+  }
+]

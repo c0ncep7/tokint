@@ -37,6 +37,7 @@ try {
     [`tokint-${version}.zip`, extensionEntries],
     [`tokint-${version}-chrome-web-store.zip`, storeEntries(extensionEntries, version)],
     [`tokint-${version}-source.zip`, sources],
+    [`tokint-${version}-store-assets.zip`, (await files('docs/store-assets')).map(entry => ({ ...entry, name: entry.name.slice('docs/store-assets/'.length) }))],
   ];
   for (const [name, entries] of archives) {
     const bytes = zip(entries);

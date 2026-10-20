@@ -42,11 +42,11 @@ referrers, and verifies its SHA-256 hash before passing its bytes into the isola
 sandbox. A separate local cache holds only this public library and verifies it
 again on reuse. This public-library cache is unencrypted; no artwork, token
 identifiers or preferences go into it.
-The sandbox itself still has no network access. The CDN receives the library
+The sandbox separates artwork from extension APIs but does not block WebRTC. HTML is paused until the user explicitly consents to creator-controlled network connections, including external or local services and IP disclosure. Consent is tied to the selected bytes, covers preview/fullscreen/conversion, is never saved, and is revoked by Stop, media changes, a new lookup, reload, or navigation. Original download does not execute the artwork in TOKINT. The CDN receives the library
 request and connection information described in the policy.
 
-Version 1.0.2 includes these storage, Art Blocks, dependency and export changes.
-The hosted policy was checked during release preparation and still describes the
-old encrypted vault and 12-character passphrase. Deploy `public/privacy.html`
-before submitting 1.0.2. Building or packaging does not update GitHub Pages or the
-published source release; see [VERIFICATION.md](VERIFICATION.md).
+Version 1.0.3 introduces this explicit artwork consent and corrects the former
+no-network claim. Deploy `public/privacy.html` with the release and keep the
+bundled policy, public page, store description, and privacy declarations aligned.
+Building or packaging does not update GitHub Pages or the published release;
+see [VERIFICATION.md](VERIFICATION.md) for actual publication status.

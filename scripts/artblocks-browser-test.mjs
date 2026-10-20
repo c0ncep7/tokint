@@ -73,6 +73,12 @@ try {
     await page.locator('#contract').fill(contract);
     await page.locator('#token').fill('5603');
     await page.locator('#token').press('Enter');
+    if (granted) {
+      await page.locator('#html-consent').waitFor({ state: 'visible', timeout: 60_000 });
+      assert.equal(await page.locator('#html-stage iframe').count(), 0);
+      assert.equal(cdnRequests, 0, 'Consent precedes dependency loading');
+      await page.locator('#run-html').click();
+    }
     if (!granted) {
       await page.waitForFunction(() => document.querySelector('#status').textContent.includes('Allow access to https://token.artblocks.io'));
       assert.equal(await page.locator('#retry').textContent(), 'Allow and retry');
@@ -85,7 +91,7 @@ try {
       assert.equal(await page.locator('#html-stage iframe').count(), 0);
       console.log('PASS missing dependency access is actionable and makes no CDN request');
     } else {
-      await page.waitForFunction(() => document.querySelector('#media-type').textContent === 'HTML' || document.querySelector('#status-row').dataset.state === 'error', null, { timeout: 60_000 });
+      await page.waitForFunction(() => document.querySelector('#media-caption').textContent.includes('canvas') || document.querySelector('#status-row').dataset.state === 'error', null, { timeout: 60_000 });
       assert.equal(await page.locator('#status').textContent(), '');
       assert.equal(await page.locator('#name').textContent(), 'Chromie Squiggle #5603');
       assert.equal(await page.locator('#media-source').inputValue(), 'animation_url');
@@ -162,6 +168,10 @@ try {
       await page.locator('#contract').fill(contract); await page.locator('#token').fill('5603');
       await page.locator('#token').press('Enter');
       await page.waitForFunction(() => document.querySelector('#media-type').textContent === 'HTML');
+      await page.locator('#html-consent').waitFor({ state: 'visible' });
+      assert.equal(await page.locator('#html-stage iframe').count(), 0, 'Cached HTML requires fresh consent');
+      await page.locator('#run-html').click();
+      await page.waitForFunction(() => document.querySelector('#media-caption').textContent.includes('canvas'));
       assert.equal(cdnRequests, 1, 'Reload reuses persistent library and artwork caches offline');
       await context.setOffline(false);
       await page.locator('#fullscreen-media').click();

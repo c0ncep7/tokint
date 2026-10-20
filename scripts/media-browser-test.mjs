@@ -174,6 +174,10 @@ try {
   await submit(5);
   assert.equal(await page.locator('#media-source').inputValue(), 'animation_url');
   assert.equal(await page.locator('#media-type').textContent(), 'HTML');
+  assert.equal(await page.locator('#html-stage iframe').count(), 0);
+  await page.locator('#run-html').click();
+  await page.locator('#html-stage iframe').waitFor({ state: 'attached' });
+  await page.waitForFunction(() => document.querySelector('#media-caption').textContent.includes('canvas'));
   assert.equal(await page.locator('#html-stage iframe').getAttribute('sandbox'), 'allow-scripts');
   assert.equal(await page.evaluate(() => document.body.dataset.compromised), undefined);
   await page.locator('#fullscreen-media').click();
@@ -197,6 +201,8 @@ try {
 
   for (const [id, message] of [[6, 'unsupported external script'], [7, 'Broken artwork fixture']]) {
     await page.locator('#token').fill(String(id)); await page.locator('#token').press('Enter');
+    await page.locator('#html-consent').waitFor({ state: 'visible' });
+    await page.locator('#run-html').click();
     await page.waitForFunction(message => document.querySelector('#status').textContent.includes(message), message);
     assert.equal(await page.locator('#media-source').inputValue(), 'animation_url');
     assert.equal(await page.locator('#html-stage iframe').count(), 0);

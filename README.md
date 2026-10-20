@@ -29,7 +29,7 @@ setting and works with either choice of RPC provider.
 
 ## Install
 
-Current production package: **1.0.2**. See [release verification](VERIFICATION.md)
+Current production package: **1.0.3**. See [release verification](VERIFICATION.md)
 for validation results and the remaining publication steps.
 
 Use Chrome, Brave, or another Chromium browser that supports unpacked Manifest V3 extensions. The manifest requires Chromium 109 or later; use a current browser for media decoding and conversion support.
@@ -78,14 +78,14 @@ on `token.artblocks.io` directly, and its PNG media proxy URLs resolve to
 These hosts and `generator.artblocks.io` for HTML animation require optional access;
 use **Allow and retry** when prompted.
 For example, Chromie Squiggle #5603 loads without following its legacy redirect
-chains. Its animation loads a pinned p5.js 1.0.0 runtime on demand from
+chains. Choose **Run HTML artwork** after reviewing the network disclosure. Its animation then loads a pinned p5.js 1.0.0 runtime on demand from
 `cdnjs.cloudflare.com`, with optional access and a SHA-256 integrity check. The
 verified library is cached for offline reuse. Click the artwork to toggle motion,
 or select `image` for the PNG. For animated GIF/WebP exports, enable **Click artwork
 before recording** in Download/Convert. The original metadata URI remains visible. Other contracts and
 cross-token metadata references retain their original routing.
 
-The inspector shows the original metadata URI, resolved URL, JSON, attributes, and image preview. JSON is normally indented; large or deeply nested objects use compact formatting to keep display memory bounded. Metadata deeper than 64 object/array levels is rejected. Use the copy and external-link controls to inspect sources. The contract link opens Etherscan's Read Contract page. When `animation_url` contains a media reference, it is selected by default; otherwise the preview starts with the first available image or media field. When metadata provides multiple distinct assets, the Media source dropdown in the preview footer switches between `image`, `animation_url`, `image_url`, inline SVG `image_data`, other media aliases, and `properties.files` entries. Duplicate media values share one entry; the selector is hidden when only one distinct value remains. The selected asset drives the preview, storage badge, source link, original download, and conversion tools. Animated image formats work from any of these fields. Base64 HTML animations also preview in an isolated sandbox. Audio and video remain outbound links. The OpenSea and OnChainChecker logos beneath the media open the submitted token on each service in a new tab. Both logos are bundled locally; the services are contacted only when you follow a link.
+The inspector shows the original metadata URI, resolved URL, JSON, attributes, and image preview. JSON is normally indented; large or deeply nested objects use compact formatting to keep display memory bounded. Metadata deeper than 64 object/array levels is rejected. Use the copy and external-link controls to inspect sources. The contract link opens Etherscan's Read Contract page. When `animation_url` contains a media reference, it is selected by default; otherwise the preview starts with the first available image or media field. When metadata provides multiple distinct assets, the Media source dropdown in the preview footer switches between `image`, `animation_url`, `image_url`, inline SVG `image_data`, other media aliases, and `properties.files` entries. Duplicate media values share one entry; the selector is hidden when only one distinct value remains. The selected asset drives the preview, storage badge, source link, original download, and conversion tools. Animated image formats work from any of these fields. HTML artwork, including base64 animations, stays paused until you explicitly choose **Run HTML artwork** after reviewing the network disclosure. Audio and video remain outbound links. The OpenSea and OnChainChecker logos beneath the media open the submitted token on each service in a new tab. Both logos are bundled locally; the services are contacted only when you follow a link.
 
 Click the toolbar button on an OpenSea, SuperRare, or other HTTP(S) page with adjacent `/contract-address/token-ID` path segments to open that token automatically. The source tab stays open. Unsupported or ambiguous URLs require manual entry. Only Ethereum mainnet is supported: recognized non-mainnet labels are rejected, while unlabeled URLs are assumed to be mainnet. Website URL conventions cannot reliably identify every chain.
 
@@ -124,7 +124,7 @@ Use the sun/moon button for a saved light or dark theme, the info button for hel
 
 ## Download and convert
 
-The Media download button opens **Download/Convert**. Choose **Original** to save the selected image or HTML bytes unchanged, or adjust the export controls, click **Convert**, inspect the preview, and click **Download**. All conversion runs locally; media is never uploaded to a conversion service.
+The Media download button opens **Download/Convert**. Choose **Original** to save the selected image or HTML bytes unchanged, or adjust the export controls, click **Convert**, inspect the preview, and click **Download**. Conversion runs locally; TOKINT does not upload media to a conversion service. HTML conversion executes artwork code and requires the same explicit consent as its preview; that code may make its own network connections.
 
 The dialog checks browser decoding, canvas encoding, and WebAssembly support.
 Unavailable export formats are disabled with an explanation; original downloads
@@ -148,7 +148,7 @@ Automatic remote previews have a **100 MiB download limit** and a **30-second ti
 
 SVG export supports a bounded subset of declarative SMIL and CSS keyframe animation. Scripts, event-based timing, embedded HTML/images, external assets/fonts, and unsupported timing patterns are rejected for conversion. SVG limits are 2 MiB of markup, 10,000 elements, 32 million source pixels, 3000 output frames, and five minutes of generation. Unsupported artwork can still be downloaded unchanged. SVG is decoded as an image, never inserted as live markup into the extension page.
 
-HTML previews accept `data:text/html` (base64 or percent-encoded) and HTTP responses with `text/html`. They run in a separate, opaque sandbox with no extension APIs, external requests, frames, forms, or popups. The exact external script reference `https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.0.0/p5.min.js` is fetched on demand by TOKINT after optional CDN access is granted. A pinned SHA-256 hash is checked before execution inside the sandbox. The dependency download is limited to 1 MiB and 15 seconds, with redirects blocked and cookies/referrers omitted. A separate public-library cache supports offline reuse and is reverified on every load; it contains no user or token data and remains when recent tokens are cleared. No p5 runtime is shipped in the extension. Other external scripts produce an actionable error; use the source link or select another media field. Original downloads retain the exact HTML bytes. Canvas exports sample the largest canvas using the existing GIF/WebP controls, with a 0.1–60 second clip and a 20 fps default. Sampling advances animation callbacks and JavaScript timers on a controlled clock; artwork relying on external resources, real-time input, or non-canvas DOM rendering may preview differently or have no convertible canvas. HTML input is limited to 2 MiB and eight external script elements. **Click artwork before recording** sends one synthetic click at the largest canvas's center before sampling each fresh export attempt. It defaults off and does not affect the live preview; enable it for Chromie Squiggles. Preview clicks are not transferred to the export. Artworks requiring a trusted browser gesture, multiple interactions or other controls may need capture outside TOKINT.
+HTML previews accept `data:text/html` (base64 or percent-encoded) and HTTP responses with `text/html`. They remain paused until the user chooses **Run HTML artwork**. The notice explains that code from the artwork’s creator can contact external or local services and reveal the user’s IP address without a site-access prompt. TOKINT cannot control those destinations or their data use. The opaque sandbox separates artwork from extension APIs, TOKINT settings, and other tabs, and restricts ordinary resource loading, frames, forms, and popups; it does not prevent WebRTC traffic. Consent is tied to the exact bytes in the current selection and covers preview, fullscreen, and conversion. **Stop HTML artwork**, switching media, a new lookup, refresh, reload, or leaving the token revokes consent and destroys running artwork frames. Consent is never saved; cached HTML requires it again. Original downloads do not execute the artwork in TOKINT, but opening them elsewhere may execute code. The exact external script reference `https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.0.0/p5.min.js` is fetched on demand by TOKINT after artwork consent and optional CDN access are granted. A pinned SHA-256 hash is checked before execution inside the sandbox. The dependency download is limited to 1 MiB and 15 seconds, with redirects blocked and cookies/referrers omitted. A separate public-library cache supports offline reuse and is reverified on every load; it contains no user or token data and remains when recent tokens are cleared. No p5 runtime is shipped in the extension. Other external scripts produce an actionable error; use the source link or select another media field. Original downloads retain the exact HTML bytes. Canvas exports sample the largest canvas using the existing GIF/WebP controls, with a 0.1–60 second clip and a 20 fps default. Sampling advances animation callbacks and JavaScript timers on a controlled clock; artwork relying on external resources, real-time input, or non-canvas DOM rendering may preview differently or have no convertible canvas. HTML input is limited to 2 MiB and eight external script elements. **Click artwork before recording** sends one synthetic click at the largest canvas's center before sampling each fresh export attempt. It defaults off and does not affect the live preview; enable it for Chromie Squiggles. Preview clicks are not transferred to the export. Artworks requiring a trusted browser gesture, multiple interactions or other controls may need capture outside TOKINT.
 
 
 ## Settings
@@ -322,20 +322,19 @@ npm run package:store
 | `tokint-<version>-chrome-web-store.zip` | Upload to the Chrome Web Store; `manifest.json` is at the archive root |
 | `tokint-<version>.zip` | Manual installation; contains the `extension/` folder |
 | `tokint-<version>-source.zip` | Corresponding source, lockfile, tests, build scripts, vendor source, licenses, privacy policy, and reviewer notes |
+| `tokint-<version>-store-assets.zip` | Store icon, current screenshots, promotional tiles, and upload instructions |
 | `bundle-report.json`, `LICENSE`, `DISTRIBUTION.md`, `PRIVACY.md`, `WEB_STORE.md` | Build report and distribution/submission documentation |
 | `SHA256SUMS.txt` | SHA-256 checksums for the release artifacts |
 
 Packaging checks the store manifest version and required entry points and legal/privacy files. It uses Node.js without a system archive tool. Entries have fixed timestamps and stable ordering; unchanged inputs on the same toolchain produce identical archives. Repeating the command replaces that version's local artifacts. Packaging does not publish or run browser tests.
 
-The current local release is **1.0.2**, under `releases/1.0.2/`. It includes the
-Art Blocks fixes, animation-first selection, on-demand p5.js support,
-click-to-start exports, and optional RPC persistence. The earlier
-[1.0.1 source release](https://github.com/c0ncep7/tokint/releases/tag/v1.0.1)
-does not match this build. Publish the 1.0.2 source ZIP and checksums alongside
-its binary, and deploy the updated [privacy policy](public/privacy.html) to its
-[public URL](https://c0ncep7.github.io/tokint/public/privacy.html). The currently
-hosted policy still describes the retired vault. See [verification](VERIFICATION.md)
-for the checked release and publication status.
+The current release is **1.0.3**, under `releases/1.0.3/`. It adds explicit,
+revocable consent for executable HTML artwork and accurate network disclosures.
+The matching source and checksums belong with the binary at the
+[1.0.3 release](https://github.com/c0ncep7/tokint/releases/tag/v1.0.3).
+The [public privacy policy](https://c0ncep7.github.io/tokint/public/privacy.html)
+must match `public/privacy.html`. See [verification](VERIFICATION.md) for
+validation and publication status.
 
 TOKINT is licensed under **GPL-2.0-only**; see [LICENSE](LICENSE) and [distribution requirements](DISTRIBUTION.md). Make the matching source archive available alongside each binary release. Before submission, publish the [privacy policy](public/privacy.html) at a public HTTPS URL, complete the listing and reviewer fields in [docs/WEB_STORE.md](docs/WEB_STORE.md), and complete the remaining publisher steps in [VERIFICATION.md](VERIFICATION.md).
 
@@ -363,7 +362,7 @@ Browser tests use temporary profiles and local fixtures, with output under `test
 | `npm run test:cache` / `npm run test:alchemy` | Focused browser suites |
 | `npm run test:live` | Optional read-only Loot #1, The Memes #410, Chromie Squiggle #5603, and BAYC #1 metadata checks; requires network access |
 | `npm run test:storage` | Immediate first use, session-only and remembered RPCs, browser restarts, cross-tab updates, and reset of obsolete encrypted data |
-| `npm run test:security` | Real-browser redirect consent, RPC POST isolation, metadata resource bounds, and preview limits |
+| `npm run test:security` | Real-browser redirects, RPC POST isolation, metadata/preview bounds, and HTML consent with real WebRTC traffic |
 | `npm run test:release` | Typecheck, units, build, and all standard browser suites including Art Blocks, offline conversion, security, and storage checks; excludes optional live checks |
 
 Run `npm audit` with registry access before each release; use `npm outdated` when planning dependency updates. All declared dependencies are used; `gifsicle-wasm-browser` is pinned because the build extracts its embedded runtime. `p5@1.0.0` is a development-only fixture for offline dependency tests and is excluded from the extension. The production dependency URL and SHA-256 pin are in `src/html-dependencies.ts`. See [VERIFICATION.md](VERIFICATION.md) for actual results and outstanding checks.

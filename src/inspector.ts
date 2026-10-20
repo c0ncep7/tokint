@@ -12,7 +12,7 @@ import { createMediaModal } from './media-modal';
 import { createShareModal } from './share-modal';
 import { svgDimensions } from './svg';
 import { tokenMedia } from './token-media';
-import { createHtmlMedia } from './html-media';
+import { createHtmlMedia, type HtmlArtworkConsent } from './html-media';
 
 const el = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const infoModal = el<HTMLDialogElement>('info-modal');
@@ -66,6 +66,23 @@ const mediaRequests = new LatestRequest();
 const mediaSelect = el<HTMLSelectElement>('media-source');
 let selectMedia: (() => Promise<void>) | undefined;
 let previewUrl: string | undefined;
+let startHtml: (() => Promise<void>) | undefined;
+let htmlConsentController: AbortController | undefined;
+function revokeHtmlConsent() {
+  htmlConsentController?.abort(); htmlConsentController = undefined;
+  shareModal.setHtmlConsent(undefined);
+  mediaModal.reset();
+  el('html-stage').replaceChildren(); el('html-stage').hidden = true;
+  el('html-running').hidden = true;
+}
+el('run-html').addEventListener('click', event => {
+  if (event.isTrusted) void startHtml?.();
+});
+el('stop-html').addEventListener('click', () => {
+  revokeHtmlConsent(); pending = undefined; el('retry').hidden = true;
+  imageNote('HTML artwork is paused.'); el('html-consent').hidden = false; status('');
+  el('run-html').focus();
+});
 mediaSelect.addEventListener('change', () => { void selectMedia?.(); });
 type Ticket = ReturnType<LatestRequest['begin']>;
 let pending: { error: Failure; action: () => Promise<void>; ticket: Ticket } | undefined;
@@ -115,6 +132,7 @@ function status(message: string, state = 'ready') { el('status').textContent = m
 function imageNote(text: string, loading = false) { el('media-size').textContent = ''; setBusy(el('image-placeholder'), loading); mediaModal.reset(); el('image-placeholder').hidden = false; el('image-note').textContent = text; image.hidden = true; }
 function resetMedia() {
   mediaRequests.cancel();
+  revokeHtmlConsent(); startHtml = undefined; el('html-consent').hidden = true;
   shareModal.reset(); mediaModal.reset();
   el('html-stage').replaceChildren(); el('html-stage').hidden = true;
   pending = undefined; el('retry').hidden = true;
@@ -227,16 +245,40 @@ async function preview(url: string, ticket: Ticket, cachedImage?: Blob, cache?: 
     if (!ticket.current()) return;
     shareModal.setBlob(url, blob);
     if (extension === 'html') {
-      const host = el('html-stage'); host.replaceChildren(); host.hidden = false;
-      const html = await createHtmlMedia(blob, host, ticket.signal);
-      if (!ticket.current()) { html.dispose(); return; }
-      setBusy(el('image-placeholder'), false); el('image-placeholder').hidden = true;
-      mediaModal.setHtml((stage, signal) => createHtmlMedia(blob, stage, signal));
-      shareModal.setBlob(url, blob, html.width, html.height);
-      el('media-caption').textContent = html.capture ? `${html.width} × ${html.height} canvas` : 'HTML artwork';
+      imageNote('HTML artwork is paused.'); el('html-consent').hidden = false;
+      el('media-caption').textContent = 'HTML artwork';
       el('media-type').textContent = 'HTML';
       el('media-size').textContent = `${Number((blob.size / 1_000_000).toFixed(2))} MB`;
-      if (cache && !cachedImage) void rememberImage(cache.key, cache.snapshot, { url, blob }, cache.epoch).then(cacheChanged);
+      const render = async (consent: HtmlArtworkConsent) => {
+        if (!ticket.current() || consent.signal.aborted) return;
+        el('html-consent').hidden = true; el('html-running').hidden = false;
+        imageNote('Starting HTML artwork…', true);
+        const host = el('html-stage'); host.replaceChildren(); host.hidden = false;
+        try {
+          const html = await createHtmlMedia(blob, host, ticket.signal, consent);
+          if (!ticket.current() || consent.signal.aborted) { html.dispose(); return; }
+          setBusy(el('image-placeholder'), false); el('image-placeholder').hidden = true;
+          mediaModal.setHtml((stage, signal) => createHtmlMedia(blob, stage, signal, consent));
+          shareModal.setBlob(url, blob, html.width, html.height);
+          el('media-size').textContent = `${Number((blob.size / 1_000_000).toFixed(2))} MB`;
+          el('media-caption').textContent = html.capture ? `${html.width} × ${html.height} canvas` : 'HTML artwork';
+          if (cache && !cachedImage) void rememberImage(cache.key, cache.snapshot, { url, blob }, cache.epoch).then(cacheChanged);
+          status('');
+        } catch (error) {
+          if (ticket.current() && !consent.signal.aborted) {
+            host.replaceChildren(); host.hidden = true;
+            failure(error, () => render(consent), ticket, true);
+          }
+        }
+      };
+      startHtml = async () => {
+        if (!ticket.current() || htmlConsentController) return;
+        htmlConsentController = new AbortController();
+        const consent = { blob, signal: htmlConsentController.signal };
+        shareModal.setHtmlConsent(consent);
+        const rendering = render(consent); el('stop-html').focus();
+        await rendering;
+      };
       status(''); return;
     }
     if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -370,8 +412,9 @@ void initialize().catch(e => status(e instanceof Error ? e.message : 'Could not 
 window.addEventListener('hashchange', () => {
   requests.cancel();
   mediaRequests.cancel();
+  resetMedia(); startHtml = undefined;
   if (el('status').ariaBusy === 'true') status('');
   if (el('image-placeholder').ariaBusy === 'true') imageNote('No media loaded.');
   void initialize();
 });
-window.addEventListener('pagehide', () => { alchemy.dispose(); requests.cancel(); mediaRequests.cancel(); shareModal.reset(); mediaModal.reset(); if (previewUrl) URL.revokeObjectURL(previewUrl); objectUrls.forEach(URL.revokeObjectURL); });
+window.addEventListener('pagehide', () => { alchemy.dispose(); requests.cancel(); mediaRequests.cancel(); revokeHtmlConsent(); shareModal.reset(); mediaModal.reset(); if (previewUrl) URL.revokeObjectURL(previewUrl); objectUrls.forEach(URL.revokeObjectURL); });

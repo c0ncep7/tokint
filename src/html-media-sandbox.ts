@@ -115,7 +115,7 @@ window.addEventListener('message', function initialize(event) {
   window.removeEventListener('message', initialize);
   const fail = (error: unknown) => parent.postMessage({ channel: 'tokint-html', id: 0, error: error instanceof Error ? error.message : 'HTML artwork could not be prepared.' }, '*');
   try {
-    // Parse only inside the network-isolated sandbox, never in the extension DOM.
+    // Parse only inside the opaque sandbox after user consent, never in our DOM.
     // The parent fetches only allowlisted, hash-pinned dependencies as bytes.
     // No artwork executes until dependency preparation has completed.
     const parsed = new DOMParser().parseFromString(data.html, 'text/html');

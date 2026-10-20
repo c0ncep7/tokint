@@ -24,9 +24,10 @@ With Node.js 22 or later, run `npm ci`, `npm run test:release`, then
 - `tokint-<version>.zip`: extract and load its `extension/` directory for manual installation.
 - `tokint-<version>-source.zip`: source, lockfile, build scripts, tests, documentation,
   and the vendored Gifsicle source/build materials.
+- `tokint-<version>-store-assets.zip`: listing images and upload instructions.
 - Licenses, privacy/submission notes, bundle report, and `SHA256SUMS.txt`.
 
-The current version is **1.0.2**, with artifacts under `releases/1.0.2/`.
+The current version is **1.0.3**, with artifacts under `releases/1.0.3/`.
 For future releases, increment `package.json`, both root versions in
 `package-lock.json`, and `public/manifest.json` together before packaging. Packaging validates entry points
 and required legal/privacy files; it does not run the test suites or publish

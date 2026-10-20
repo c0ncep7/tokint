@@ -166,11 +166,15 @@ test('HTML media host accepts upscaled frames and rejects either dimension above
     },
     document: { createElement: () => frame },
     chrome: { runtime: { getURL: (path: string) => path } },
-    AbortController, ArrayBuffer, Uint8ClampedArray, setTimeout, clearTimeout,
+    AbortController, DOMException, ArrayBuffer, Uint8ClampedArray, setTimeout, clearTimeout,
     ImageData: class { constructor(public data: Uint8ClampedArray, public width: number, public height: number) {} },
   });
   runInContext(buildSync({ entryPoints: ['src/html-media.ts'], bundle: true, write: false, format: 'iife', globalName: 'media', target: 'chrome109' }).outputFiles[0].text, context);
-  const media = await runInContext('media.createHtmlMedia(input, host, new AbortController().signal, true)', context);
+  for (const grant of ['undefined', '{ blob: {}, signal: new AbortController().signal }', '{ blob: input, signal: (() => { const c = new AbortController(); c.abort(); return c.signal; })() }']) {
+    await assert.rejects(runInContext(`media.createHtmlMedia(input, host, new AbortController().signal, ${grant})`, context), /Choose Run HTML artwork/);
+    assert.equal(listeners.size, 0, 'No iframe/message bridge may start before valid consent');
+  }
+  const media = await runInContext('globalThis.consentController = new AbortController(); media.createHtmlMedia(input, host, new AbortController().signal, { blob: input, signal: consentController.signal }, true)', context);
   try {
     const pixels = await media.pixels(0, 2000, 1000, '#000000');
     assert.equal(pixels.width, 2000); assert.equal(pixels.height, 1000);
@@ -179,10 +183,13 @@ test('HTML media host accepts upscaled frames and rejects either dimension above
       await assert.rejects(media.pixels(0, width, height, '#000000'), /Invalid HTML export dimensions/);
     }
     assert.equal(requests.length, 1);
+    runInContext('consentController.abort()', context);
+    assert.equal(listeners.size, 0);
+    await assert.rejects(media.pixels(0, 32, 16, '#000000'), /Media cancelled/);
   } finally { media.dispose(); }
 });
 
-test('HTML artwork is restricted to an opaque manifest sandbox without extension, network, or navigation privileges', () => {
+test('HTML artwork is restricted to an opaque manifest sandbox without extension privileges and with restricted resource loading', () => {
   const manifest = JSON.parse(readFileSync(new URL('../public/manifest.json', import.meta.url), 'utf8'));
   assert.deepEqual(manifest.sandbox.pages, ['html-media.html']);
   const policy = manifest.content_security_policy;

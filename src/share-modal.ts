@@ -1,6 +1,6 @@
 import { setBusy } from './loading';
 import type { ConversionCapabilities } from './conversion-capabilities-worker';
-import { createHtmlMedia, type HtmlMedia } from './html-media';
+import { createHtmlMedia, type HtmlMedia, type HtmlArtworkConsent } from './html-media';
 import { downloadName, embeddedMediaBlob, mediaExtension } from './downloads';
 import { prepareSvg, svgPixels, svgExportSize, staticSvgResult, type SvgPlan } from './svg';
 import { Failure } from './core';
@@ -28,6 +28,7 @@ export function createShareModal() {
   const svgDuration = el<HTMLInputElement>('share-svg-duration');
   const htmlClick = el<HTMLInputElement>('share-html-click');
   let source: Source | undefined;
+  let htmlConsent: HtmlArtworkConsent | undefined;
   let capabilities: ConversionCapabilities | undefined;
   let capabilityError = '';
   let capabilityCheck: Promise<void> | undefined;
@@ -160,7 +161,9 @@ export function createShareModal() {
     capabilityStatus.textContent = unavailable
       ? `${unavailable}${capabilities || capabilityError ? ' Original download is still available.' : ''}`
       : animated && (!gif || !webp) ? `${gif ? 'WebP export' : 'GIF optimization'} is unavailable in this browser. ${gif ? 'GIF' : 'WebP'} is selected.` : '';
-    generate.disabled = !!unavailable || form.getAttribute('aria-busy') === 'true';
+    const needsConsent = !!source?.html && (!htmlConsent || htmlConsent.blob !== source.blob || htmlConsent.signal.aborted);
+    el('share-html-consent-note').hidden = !needsConsent;
+    generate.disabled = needsConsent || !!unavailable || form.getAttribute('aria-busy') === 'true';
   }
   function stopProbe() {
     setBusy(original, false);
@@ -292,7 +295,7 @@ export function createShareModal() {
       if (extension === 'html') {
         current.html = true; current.frames = 2;
         htmlHost = document.createElement('div'); htmlHost.className = 'html-export-stage'; document.body.append(htmlHost);
-        html = await createHtmlMedia(blob, htmlHost, signal, true, clickBeforeRecording);
+        html = await createHtmlMedia(blob, htmlHost, signal, htmlConsent, true, clickBeforeRecording);
         if (!active()) { html.dispose(); return; }
         htmlExport = html;
         if (!html.capture) throw new Error('This HTML artwork has no canvas to export. The original HTML download is available.');
@@ -330,7 +333,7 @@ export function createShareModal() {
           if (!active()) return;
           if (html && pass) {
             html.dispose();
-            html = await createHtmlMedia(blob, htmlHost!, signal, true, clickBeforeRecording);
+            html = await createHtmlMedia(blob, htmlHost!, signal, htmlConsent, true, clickBeforeRecording);
             if (!active()) { html.dispose(); return; }
             htmlExport = html;
           }
@@ -384,6 +387,11 @@ export function createShareModal() {
     })().catch(fail);
   });
   return {
+    setHtmlConsent(consent: HtmlArtworkConsent | undefined) {
+      const wasAllowed = !!htmlConsent; htmlConsent = consent;
+      if (!consent && wasAllowed) dismiss();
+      updateControls();
+    },
     setSource(url: string, identity: { contract: string; id: bigint; title: string }) {
       source = { url, ...identity }; htmlClick.checked = false; permissionOrigin = undefined; open.hidden = false; updateControls();
     },
@@ -391,6 +399,7 @@ export function createShareModal() {
       if (source?.url === url) { source.blob = blob; void originalReady(source, blob); source.width = width; source.height = height; if (dialog.open) { sourceLabel(); updateControls(); } void inspectSource(); }
     },
     reset() {
+      htmlConsent = undefined;
       source = undefined; permissionOrigin = originalPermission = undefined; open.hidden = true; dismiss();
       if (originalUrl) URL.revokeObjectURL(originalUrl);
       originalUrl = undefined; originalBlob = undefined;

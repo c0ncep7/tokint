@@ -1,77 +1,106 @@
-# Release verification: TOKINT 1.0.2
+# Release verification: TOKINT 1.0.3
 
-Prepared October 20, 2026. This file describes the current production candidate.
-[Historical records](docs/VERIFICATION_HISTORY.md) preserve earlier results,
-including the retired vault. Packaging does not publish or submit the extension.
+Prepared October 20, 2026. This is the tested candidate for Chrome Web Store
+submission. [Historical results](docs/VERIFICATION_HISTORY.md) cover earlier
+versions. No Chrome Web Store upload or submission has been performed.
 
-## Changes since the published 1.0.1 source
+## HTML consent and network disclosure
 
-- Removed the mandatory encrypted vault, passphrase UI, and migration flow.
-  Alchemy/custom RPC URLs are session-only by default. **Remember on this device**
-  explicitly saves the URL and API key locally with an unencrypted-storage warning.
-  Old encrypted preferences and the previous token cache are discarded.
-- Added direct Art Blocks routes, animation-first media selection, isolated p5.js
-  dependency loading with a pinned hash, and click-to-start artwork exports.
-- Removed unused public RPC client actions and the redundant inspector entry file.
-  Source-reference and bundle-input scans found no other unreferenced application
-  exports or source modules. JSON syntax-highlight classes are generated dynamically.
-- Aligned package, lockfile, manifest, and release documentation at **1.0.2**.
-  No dependency versions or host permissions were changed in this cleanup.
+The security review found that `connect-src 'none'` does not block artwork-initiated
+WebRTC/STUN traffic. Version 1.0.3 replaces automatic executable HTML previews
+with a prominent, explicit **Run HTML artwork** decision. The notice explains
+creator-controlled external/local connections and IP disclosure without a site
+permission prompt. It does not promise network isolation.
 
-## Validation
+Consent is bound to the exact artwork Blob in the current inspector selection.
+Preview, fullscreen, and every export attempt require that same live grant.
+It is never saved. **Stop HTML artwork**, media changes, new lookups, refresh,
+reload, and navigation revoke the grant and destroy active artwork frames.
+Cached HTML requires fresh consent. Metadata, other images, and original downloads
+remain usable without execution. Opening a downloaded original elsewhere may run
+its code. The opaque sandbox continues to separate artwork from extension APIs,
+TOKINT settings, and other tabs; ordinary resource loading remains restricted.
 
-- `npm run check`: strict TypeScript, **149 unit tests**, and production build pass.
-- `npm run test:release`: all checks pass, including inspector (44), sharing (48),
-  cache (15), Alchemy (15), configuration (8), storage/restart (6), Art Blocks,
-  media/HTML, toolbar actions, offline conversion, and real-server security suites.
-  Browser tests used disposable Chrome for Testing **153.0.8010.12** profiles.
+The privacy policy, Settings, Help, README, and store declarations disclose the
+same behavior. Application and conversion logic remain bundled; the remote-code
+declaration remains **Yes: consented, isolated HTML artwork**. Google's review
+of its [Manifest V3 exemption](https://developer.chrome.com/docs/webstore/program-policies/mv3-requirements)
+is still required.
+
+## Automated verification
+
+- `npm run test:release`: strict TypeScript, all **149 unit tests**, production
+  build, and every standard browser suite pass on Chrome for Testing
+  **153.0.8010.12**.
+- Browser suites cover inspector (44), sharing (48), cache (15), Alchemy (15),
+  configuration (8), storage/restart (6), media/HTML, Art Blocks, toolbar actions,
+  offline conversion, redirects, resource bounds, and explicit HTML consent.
+- `scripts/html-consent-browser-test.mjs` uses a real loopback UDP listener.
+  It observes no STUN packets or artwork iframe before consent, permits the
+  disclosed traffic after consent as a positive control, and confirms it stops
+  after **Stop HTML artwork**. It also covers original download before consent,
+  disabled conversion, fullscreen, media changes, offline cache reload, and a
+  narrow layout. All traffic is local to the test machine.
+- Unit coverage rejects missing, mismatched, and revoked grants at the HTML
+  execution boundary and confirms that revocation invalidates frame capture.
 - `npm run test:live`: Loot #1, The Memes #410, Chromie Squiggle #5603, and BAYC #1
-  all passed using public RPC, direct Arweave/Art Blocks routes, and IPFS metadata.
-- The extracted store ZIP loaded as **1.0.2** in a fresh browser profile. A live
-  Loot #1 lookup rendered its embedded SVG; the screenshot was inspected. Settings
-  opened without a passphrase and displayed the unchecked Remember option and
-  warning. No page-script errors occurred.
-- Online `npm audit` reports **0 known vulnerabilities**, including development
-  dependencies. This is a registry result, not a guarantee against unknown issues.
-- Confirmed Google's current Manifest V3 policy still describes an isolated-context
-  exemption for remote artwork code. The declaration and sandbox boundaries are
-  documented in [submission notes](docs/WEB_STORE.md); approval remains Google's
-  decision. [Policy](https://developer.chrome.com/docs/webstore/program-policies/mv3-requirements).
+  pass against public services. Most other browser checks use recorded fixtures.
+- Online `npm audit`: **0 known vulnerabilities**, including development
+  dependencies. This is not a guarantee against unknown vulnerabilities.
 
-## Production artifacts
+## Native Chrome acceptance
 
-`npm run package:store` generated the production artifacts under `releases/1.0.2/`:
+Checked the production 1.0.3 build through native Google Chrome
+**155.0.8059.85**, using the dedicated TOKINT Release Test profile:
 
-| Artifact | Use |
+- `tokint` + Tab entered the native extension keyword mode and opened a live
+  Loot #1 lookup with its embedded SVG and version 1.0.3 displayed.
+- A live Chromie Squiggle #5603 lookup requested the specific metadata host.
+  **Deny** produced an actionable error; retrying and **Allow** continued.
+- The HTML source host required its own native permission prompt. Once granted,
+  the artwork remained paused behind the complete network disclosure.
+- **Run HTML artwork** then requested the pinned library host. Granting it
+  rendered a canvas and displayed the persistent allowed/Stop controls.
+- **Stop HTML artwork** restored the consent notice and removed fullscreen
+  availability. Native grants stayed limited to the requested public hosts.
+
+No personal browsing profile or production API credentials were used.
+
+## Assets and package
+
+`releases/1.0.3/` contains:
+
+| Artifact | Purpose |
 | --- | --- |
-| `tokint-1.0.2-chrome-web-store.zip` | Store upload, about 330 KiB; root manifest, 49 files |
-| `tokint-1.0.2.zip` | Manual installation with the `extension/` folder |
-| `tokint-1.0.2-source.zip` | Matching source, lockfile, tests, documentation, and vendored optimizer sources |
-| `SHA256SUMS.txt` | Checksums for the release files and supporting documents |
+| `tokint-1.0.3-chrome-web-store.zip` | Store upload, with `manifest.json` at the root |
+| `tokint-1.0.3.zip` | Manual installation with `extension/` |
+| `tokint-1.0.3-source.zip` | Matching source, lockfile, tests, build scripts, and vendor materials |
+| `tokint-1.0.3-store-assets.zip` | Icon, four screenshots, small/marquee tiles, and upload instructions |
+| `SHA256SUMS.txt` | Checksums for the release artifacts and supporting files |
 
-ZIP CRC checks and both checksum manifests passed. Every installed payload matches
-both binary archives; every source-archive file matches the working tree. All
-bundled module imports and relative HTML assets resolve inside the upload package.
-Version fields match **1.0.2**, and the archive excludes source/tests, local profiles,
-and `node_modules`. The unpacked build is about **1049 KiB**, roughly **74 KiB smaller**
-than the build before this cleanup. The final source archive includes these results;
-the store ZIP remains byte-identical to the artifact used for the live browser check.
+The screenshot set was recaptured directly from 1.0.3 at 1280 × 800, device scale
+factor 1. It includes dark/light inspector views, the actual local conversion,
+and the HTML consent notice. See [asset verification](docs/store-assets/README.md).
+The 128 × 128 icon, 440 × 280 small tile, and 1400 × 560 marquee are included.
 
-## Remaining publication steps
+All four ZIP CRC checks pass. Every binary, source, and asset archive entry matches
+the working tree; both checksum manifests and all image hashes pass. The store ZIP
+contains 49 files and is about 332 KiB. Bundled module imports resolve inside the
+archive. Packaging verifies manifest versions and required entry points.
+The store package contains no tests, source tree, node_modules, browser profiles,
+or listing assets. Source and store-asset ZIPs are separate downloads.
 
-- Deploy the updated `public/privacy.html`. The live policy at
-  https://c0ncep7.github.io/tokint/public/privacy.html was checked and still describes
-  the retired vault and a 12-character passphrase.
-- Publish the matching 1.0.2 source ZIP and checksums. GitHub's latest release is
-  still [v1.0.1](https://github.com/c0ncep7/tokint/releases/tag/v1.0.1), with the
-  earlier source archive and checksums; it does not describe this binary.
-- Complete publisher/contact details, listing screenshots, distribution choices,
-  privacy answers, and reviewer instructions from [WEB_STORE.md](docs/WEB_STORE.md).
-- Upload the store ZIP and submit it for review. No upload, submission, or public
-  deployment has been performed as part of this preparation.
+## Publication and next step
 
-Most automated browser tests use fixture responses. The packaged Loot lookup and
-`test:live` use public services. Native stable-Chrome permission prompts and
-address-bar interactions were last checked on 1.0.1; recheck those manually before
-submission. Provider availability and artwork compatibility
-cannot be guaranteed for every token.
+- Matching source, binary, listing assets, and checksums:
+  https://github.com/c0ncep7/tokint/releases/tag/v1.0.3.
+- Public privacy policy: https://c0ncep7.github.io/tokint/public/privacy.html.
+  It must match the bundled `privacy.html` byte for byte.
+- Support: https://github.com/c0ncep7/tokint/issues.
+- Copy-ready declarations and reviewer instructions: [WEB_STORE.md](docs/WEB_STORE.md).
+
+The publisher will handle the Chrome Web Store setup next: publisher/contact
+verification and 2FA, listing/category/language, distribution, privacy answers and
+certifications, image uploads, reviewer instructions, package upload, and submission.
+Those dashboard actions are intentionally outside this preparation step. Local
+verification does not constitute Google approval.

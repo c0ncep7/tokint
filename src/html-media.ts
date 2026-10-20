@@ -5,17 +5,24 @@ export type HtmlMedia = {
   pixels(milliseconds: number, width: number, height: number, background: string): Promise<ImageData>;
   dispose(): void;
 };
+// A grant is tied to these exact bytes and revoked with the current selection.
+// It is never stored. Every entry point (preview, fullscreen, export) needs it.
+export type HtmlArtworkConsent = { readonly blob: Blob; readonly signal: AbortSignal };
 
-export async function createHtmlMedia(blob: Blob, host: HTMLElement, signal: AbortSignal, manual = false, clickBeforeRecording = false): Promise<HtmlMedia> {
+export async function createHtmlMedia(blob: Blob, host: HTMLElement, signal: AbortSignal, consent: HtmlArtworkConsent | undefined, manual = false, clickBeforeRecording = false): Promise<HtmlMedia> {
+  if (!consent || consent.blob !== blob || consent.signal.aborted) throw new Error('Choose Run HTML artwork in the preview before running or converting this artwork.');
+  const consentSignal = consent.signal;
   if (blob.size > 2 * 1024 * 1024) throw new Error('HTML artwork exceeds the 2 MiB preview limit.');
   const html = await blob.text();
   signal.throwIfAborted();
+  consentSignal.throwIfAborted();
   const element = document.createElement('iframe');
   element.className = 'html-media'; element.title = 'Token HTML animation';
   element.setAttribute('sandbox', 'allow-scripts');
   element.referrerPolicy = 'no-referrer';
-  // This packaged page has a unique sandbox origin, no extension APIs, and no
-  // network, frames, forms or popup access. Artwork never enters our page DOM.
+  // An opaque origin separates artwork from extension APIs and our DOM.
+  // CSP restricts fetch/resources, but does not stop WebRTC network traffic.
+  // The caller must obtain informed consent before reaching this boundary.
   element.src = chrome.runtime.getURL('html-media.html');
   let disposed = false, sequence = 0, dependenciesRequested = false;
   const dependencies = new AbortController();
@@ -24,6 +31,7 @@ export async function createHtmlMedia(blob: Blob, host: HTMLElement, signal: Abo
   function dispose() {
     if (disposed) return;
     disposed = true; dependencies.abort(); window.removeEventListener('message', receive); signal.removeEventListener('abort', dispose); element.remove();
+    consentSignal.removeEventListener('abort', dispose);
     for (const item of pending.values()) { clearTimeout(item.timer); item.reject(new DOMException('Media cancelled', 'AbortError')); }
     pending.clear();
   }
@@ -58,6 +66,7 @@ export async function createHtmlMedia(blob: Blob, host: HTMLElement, signal: Abo
     });
   }
   window.addEventListener('message', receive); signal.addEventListener('abort', dispose, { once: true });
+  consentSignal.addEventListener('abort', dispose, { once: true });
   const ready = request(0);
   element.onload = () => { element.onload = null; element.contentWindow?.postMessage({ channel: 'tokint-html', kind: 'load', html, manual, clickBeforeRecording }, '*'); };
   host.append(element);

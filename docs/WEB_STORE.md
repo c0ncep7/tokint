@@ -1,25 +1,24 @@
 # Chrome Web Store submission notes
 
-Prepared for TOKINT 1.0.2. These are copy-ready answers for the publisher's
+Prepared for TOKINT 1.0.3. These are copy-ready answers for the publisher's
 dashboard, not evidence that the extension has been submitted or approved.
 
 ## Package
 
 Run `npm ci`, `npm run test:release`, and `npm run package:store` with Node.js 22+.
-Upload `releases/1.0.2/tokint-1.0.2-chrome-web-store.zip`. The production packaging
+Upload `releases/1.0.3/tokint-1.0.3-chrome-web-store.zip`. The production packaging
 step puts `manifest.json` at the ZIP root and validates entry points, versions,
 icons, and legal/privacy files. The other binary ZIP is for manual installation.
 There is one extension and one keyword, `tokint`; no companion or extension-ID
 pairing is required. Version changes must update package, lockfile, and manifest. Chrome uses the
 [numeric manifest version](https://developer.chrome.com/docs/extensions/reference/manifest/version)
-to determine updates; 1.0.2 supersedes 1.0.1.
+to determine updates; 1.0.3 supersedes 1.0.1.
 
-Version 1.0.2 includes the Art Blocks fixes, animation-first selection, on-demand
-p5.js loading, click-to-start exports, optional RPC persistence, and a smaller RPC
-client bundle. See [verification](../VERIFICATION.md) for the exact checks and
-artifact status. The earlier 1.0.1 source release does not match this package.
-Publish the matching 1.0.2 source/checksums and deploy the current policy before
-submission. The hosted policy was checked and still describes the retired vault.
+Version 1.0.3 adds explicit, revocable consent before executable HTML artwork,
+including fullscreen and export. It corrects the former no-network claim.
+It retains the Art Blocks fixes, animation-first selection, optional RPC persistence,
+and local converters. See [verification](../VERIFICATION.md) for validation and
+publication status. Use the matching 1.0.3 source and checksums.
 
 Packaging does not upload or submit the extension. Follow Google's
 [publishing workflow](https://developer.chrome.com/docs/webstore/publish) after
@@ -47,16 +46,25 @@ convert associated media locally.
 **Yes: isolated HTML artwork only.** All extension application logic, converters,
 and WASM are packaged locally. A token's metadata may contain or reference HTML
 artwork with inline scripts. That artwork executes only within the declared
-`html-media.html` sandbox, isolated from extension APIs and from the network.
+`html-media.html` sandbox, isolated from extension APIs and TOKINT settings. It stays paused until the user
+chooses **Run HTML artwork** after a prominent network disclosure.
 It cannot supply extension logic or obtain host permissions. The packaged bridge
 exchanges bounded artwork/canvas data for preview and local GIF/WebP export.
 External scripts, frames, workers, forms, and popups are blocked. The exact
 p5.js 1.0.0 CDN reference used by legacy Art Blocks generators is fetched as bytes
-by the extension after optional CDN access is granted. Its pinned SHA-256 hash is
+by the extension after artwork consent and optional CDN access are granted. Its pinned SHA-256 hash is
 verified before its code is passed into the sandbox. It is cached separately as
 public library bytes, with integrity rechecked on reuse. No dependency code runs
 in an extension context. Unknown external scripts produce an actionable error.
-The sandbox has no direct network access or additional permissions.
+The sandbox restricts fetch and ordinary resources but does not block WebRTC.
+Artwork can contact creator-chosen external or local services and disclose the
+user’s IP address without a host-permission prompt. This is explicitly disclosed
+before consent and in the public privacy policy. No network isolation is claimed.
+Consent is limited to the exact selected bytes in one tab, covers preview,
+fullscreen and conversion, and is never persisted. Stop HTML artwork, a media
+change, new lookup, refresh, reload, or leaving the token revokes it and destroys
+running artwork frames. Downloads do not execute HTML in TOKINT. The same notice
+appears for cached artwork; conversion cannot bypass consent.
 This is the isolated-context case described in the [Manifest V3 policy](https://developer.chrome.com/docs/webstore/program-policies/mv3-requirements).
 Reviewers can inspect `src/html-dependencies.ts`, `src/html-media.ts`,
 `src/html-media-sandbox.ts`, and the manifest CSP. This exemption remains subject
@@ -81,11 +89,14 @@ of public wallet/account identifiers; TOKINT never accesses payment credentials.
 
 Health information and personal communications are not requested. Location is
 disclosed conservatively for provider-visible IP addresses, not device positioning.
-Optional features count even when disabled by default.
+Optional features count even when disabled by default. Disclose artwork-initiated
+connections as well: after consent, destinations chosen by the artwork can receive
+IP/connection information and information included in or generated by that artwork.
+TOKINT cannot enumerate these destinations or control their retention practices.
 
 Limited-use certifications: data is not sold; transfers are limited to the
 disclosed functionality; data is not used for unrelated purposes, creditworthiness,
-or lending. No developer analytics, ads, or telemetry are present. The publisher
+or lending. No developer analytics, ads, or telemetry are present. Consented third-party HTML artwork may make its own disclosed network connections. The publisher
 does not receive lookup data or have remote access to local storage.
 
 Use the hosted URL of [the canonical policy](../public/privacy.html) for the
@@ -109,7 +120,11 @@ receive the requested identifiers and your IP address. Recent tokens and cached
 media stay locally in your browser profile without encryption and can be cleared.
 Alchemy/custom RPC URLs are session-only by default. Remember on this device
 optionally saves the complete URL and any key locally without encryption. No
-passphrase is required. See the privacy policy for
+passphrase is required. HTML artwork stays paused until you consent to running
+creator-provided code. That code may contact external or local services and reveal
+your IP address without a site-access prompt. Stop HTML artwork revokes consent;
+switching media or reloading requires consent again. Original download is available
+without execution in TOKINT. See the privacy policy for
 permissions, local storage, and provider disclosures.
 
 ## Reviewer instructions
@@ -143,7 +158,8 @@ requiring a live token to remain unchanged. See [verification](../VERIFICATION.m
 For the Art Blocks regression, inspect
 `0x059edd72cd353df5106d2b9cc5ab83a52287ac3a 5603`. Allow the metadata and animation
 destination hosts when prompted. `animation_url` is selected by default; the
-generator HTML renders with p5.js fetched on demand. Allow `cdnjs.cloudflare.com`
+generator HTML stays paused until you read the network disclosure and choose
+**Run HTML artwork**. p5.js is then fetched on demand. Allow `cdnjs.cloudflare.com`
 when prompted; subsequent previews and exports reuse its verified local cache.
 Click the artwork to toggle its animation. In Download/Convert, enable
 **Click artwork before recording** and export GIF or WebP; verify the downloaded
@@ -151,18 +167,26 @@ frames change. The option starts off to preserve other artworks' behavior.
 Switch Media source to `image` to load the PNG from the direct storage host,
 granting its optional host access if needed. The inspector preserves the legacy
 metadata URI and shows the direct metadata URL.
-HTTP redirect following remains disabled. Other Art Blocks contracts and
+Before running, verify that no artwork iframe or dependency request exists and
+HTML conversion is disabled while original download remains available. After
+running, use Stop HTML artwork and confirm the iframe is removed, conversion is
+disabled, and consent is requested again. Switching media or reloading cached
+artwork must also request consent again. The security suite checks actual UDP
+STUN traffic: zero before consent, traffic after consent, and no continuing
+traffic after Stop. Host access and artwork consent are separate controls.
+
+HTTP redirect following remains disabled for TOKINT-managed fetches. Other Art Blocks contracts and
 cross-token metadata references are outside this compatibility mapping.
 
 ## Supporting pages and matching source
 
-- Privacy policy: https://c0ncep7.github.io/tokint/public/privacy.html. Deploy the
-  updated local policy; the hosted copy currently describes the old vault.
+- Privacy policy: https://c0ncep7.github.io/tokint/public/privacy.html. The hosted
+  policy must match the bundled file; publication status is in VERIFICATION.md.
 - Support: https://github.com/c0ncep7/tokint/issues.
-- Source to publish: `releases/1.0.2/tokint-1.0.2-source.zip` with the matching
-  `SHA256SUMS.txt`. Use its actual published URL in the listing/support page.
+- Matching source: https://github.com/c0ncep7/tokint/releases/tag/v1.0.3. Include
+  this link in the listing; the release supplies the source ZIP and checksums.
 - The [earlier 1.0.1 source release](https://github.com/c0ncep7/tokint/releases/tag/v1.0.1)
-  is historical and must not be presented as the source for the 1.0.2 binary.
+  is historical and must not be presented as the source for the 1.0.3 binary.
 
 Persistent settings, cache, and opted-in RPC URLs are not encrypted; the policy
 and reviewer instructions disclose this. Inspect `src/storage.ts`,
@@ -177,3 +201,16 @@ and reviewer instructions disclose this. Inspect `src/storage.ts`,
 - Include the source link matching the uploaded binary in the store description or support page.
 - See [verification](../VERIFICATION.md) for the completed release checks.
 - Review final dashboard answers and upload the store ZIP. Packaging does not submit it.
+
+## Prepared graphic assets
+
+The current icon, four 1280 × 800 screenshots, 440 × 280 small tile, and optional
+1400 × 560 marquee are in [store-assets](store-assets/README.md). The release also
+provides `tokint-1.0.3-store-assets.zip`. Upload these images individually to the
+graphic fields. Do not upload that ZIP as the extension package. Screenshot 4
+shows the HTML consent flow. The screenshot captures are from 1.0.3.
+
+The publisher will complete Chrome Web Store account/dashboard setup separately:
+registration and 2FA, publisher/contact details, category/language, distribution,
+privacy certifications, reviewer instructions, and final upload/submission. These
+steps have not been performed or certified by local packaging.
