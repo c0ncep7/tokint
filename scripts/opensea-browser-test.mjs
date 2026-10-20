@@ -1,3 +1,4 @@
+import { prepareVault } from './vault-browser-helpers.mjs';
 import { chromium } from 'playwright';
 import { encodeAbiParameters } from 'viem';
 import assert from 'node:assert/strict';
@@ -16,6 +17,7 @@ const context = await chromium.launchPersistentContext(profile, {
 });
 try {
   const worker = context.serviceWorkers()[0] || await context.waitForEvent('serviceworker');
+  await prepareVault(context, worker);
   const extensionId = new URL(worker.url()).host;
   assert.equal(await worker.evaluate(() => chrome.action.getPopup({})), `chrome-extension://${extensionId}/launcher.html`);
   assert.equal(await worker.evaluate(() => chrome.action.onClicked.hasListeners()), false);

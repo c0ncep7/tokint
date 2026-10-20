@@ -1,3 +1,4 @@
+import { prepareVault, saveTestSettings } from './vault-browser-helpers.mjs';
 import { chromium } from 'playwright';
 import { encodeAbiParameters } from 'viem';
 import assert from 'node:assert/strict';
@@ -23,6 +24,7 @@ const check = message => { checks++; console.log(`PASS ${message}`); };
 const nft = (id, named = true) => ({ contract: { address: contract, name: 'Fixture collection' }, tokenId: id, name: named ? `Artwork ${id === huge ? 'Large ID' : id}` : null, image: named ? { thumbnailUrl: 'https://res.cloudinary.com/alchemyapi/image/upload/fixture.svg' } : {} });
 try {
   const worker = context.serviceWorkers()[0] || await context.waitForEvent('serviceworker');
+  await prepareVault(context, worker);
   const root = `chrome-extension://${new URL(worker.url()).host}`;
   const page = await context.newPage(); page.on('pageerror', e => errors.push(e.message));
   await context.route('https://eth-mainnet.g.alchemy.com/**', async route => {
@@ -50,11 +52,12 @@ try {
   });
   await context.route('https://res.cloudinary.com/**', route => { imageCalls++; return route.fulfill({ contentType: 'image/svg+xml', body: svg, headers: { 'access-control-allow-origin': '*' } }); });
   await page.goto(`${root}/results.html`);
+  await page.waitForFunction(() => document.querySelector('.shell')?.inert === false);
   await page.waitForTimeout(100);
   assert.equal(await page.locator('#alchemy-actions').isVisible(), false);
   assert.equal(await page.locator('#alchemy-details').isVisible(), false); assert.equal(apiCalls.length, 0);
   check('public RPC settings hide all Alchemy controls and make no NFT API calls');
-  await worker.evaluate(settings => chrome.storage.local.set({ settingsVersion: 2, settings }), alchemy);
+  await saveTestSettings(page, alchemy);
   await page.waitForFunction(() => !document.querySelector('#alchemy-actions').hidden);
   assert.equal(await page.locator('#browse-collection').isDisabled(), true); assert.equal(apiCalls.length, 0);
   await page.locator('#contract').fill(contract);
@@ -189,7 +192,7 @@ try {
   await page.locator('#browse-collection').click();
   await page.waitForFunction(() => document.querySelector('#browse-status').textContent === 'Loading…');
   assert.equal(await page.locator('#browse-status').getAttribute('aria-busy'), 'true');
-  await worker.evaluate(settings => chrome.storage.local.set({ settingsVersion: 2, settings }), defaults);
+  await saveTestSettings(page, defaults);
   await page.waitForFunction(() => document.querySelector('#alchemy-actions').hidden);
   const disabledCount = apiCalls.length;
   await page.waitForTimeout(650);
@@ -199,6 +202,7 @@ try {
   assert.equal(await page.locator('#name').textContent(), 'Original artwork');
   check('switching providers hides all Alchemy features and cancels pending work without affecting the token');
   await page.goto(`${root}/options.html`);
+  await page.waitForFunction(() => document.querySelector('.shell')?.inert === false);
   await page.locator('#rpc-preset').selectOption('alchemy');
   assert.match(await page.locator('#alchemy-help').textContent(), /ownership\/mint details/);
   assert.match(await page.locator('#settings-form').textContent(), /hidden with other providers/);

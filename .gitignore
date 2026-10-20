@@ -6,3 +6,6 @@ test-results/
 bundle-report.json
 releases/
 .firecrawl/
+
+notes--tokint.md
+promotions/

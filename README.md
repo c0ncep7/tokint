@@ -38,6 +38,8 @@ Use Chrome, Brave, or another Chromium browser that supports unpacked Manifest V
 
 The supplied build needs no Node.js installation. Settings are available from the inspector's gear icon or the browser's extension management page.
 
+**First use:** create a local unlock passphrase of at least 12 characters. Keep it somewhere safe; there is no recovery. Unlock once each Chrome session to use your saved settings and tokens.
+
 The manual-install ZIP, `tokint-<version>.zip`, contains `extension/`; extract it before choosing **Load unpacked**. The separate `tokint-<version>-chrome-web-store.zip` is for store submission, and the source ZIP is for development.
 
 TOKINT uses one extension and one address-bar keyword: **`tokint` + Tab**. It recognizes Ethereum addresses, address/token-ID pairs, and IPFS references automatically. If upgrading from the former two-extension setup, remove the old **TOKINT IPFS** companion from the browser; it is no longer needed.
@@ -231,7 +233,7 @@ token-cache snapshots ineligible for reuse.
 
 Read the [privacy policy](public/privacy.html) for local storage, retention, third-party requests, and deletion details. [PRIVACY.md](PRIVACY.md) explains how to publish its public URL for the store listing; [Web Store submission notes](docs/WEB_STORE.md) provide permission justifications, privacy declarations, and the sandbox explanation for reviewers.
 
-Settings, the last contract, theme, and recent tokens stay in local browser storage. Providers receive the RPC/content requests you submit. There are no analytics, wallet connections, signing requests, content scripts, or background polling. Toolbar detection uses temporary `activeTab` access and reads the clicked tab's URL without fetching or injecting into its page.
+Settings, the last contract, theme, recent-token identities, metadata and cached artwork are encrypted in local browser storage with AES-256-GCM. At first use, create and confirm a passphrase of at least 12 characters. PBKDF2-HMAC-SHA-256 (600,000 iterations, random salt) derives the keys. TOKINT never saves or transmits the passphrase; derived keys live only in trusted-context Chrome session storage. **Settings → Lock saved data**, quitting Chrome completely, or reloading/disabling/updating the extension clears the keys. Unlocking restores saved data. There is no recovery; remove and reinstall TOKINT to reset a forgotten passphrase. Browser history, downloads and clipboard contents are outside the vault. Providers receive the RPC/content requests you submit. There are no analytics, wallet connections, signing requests, content scripts, or background polling. Toolbar detection uses temporary `activeTab` access and reads the clicked tab's URL without fetching or injecting into its page.
 
 TOKINT requests storage, `activeTab`, and host access for PublicNode, Pinata, and Arweave. OpenSea toolbar detection needs no permanent OpenSea host permission. Other HTTPS hosts and the literal HTTP loopback hosts `localhost` and `127.0.0.1` are optional. Remote plain-HTTP RPC, metadata, media, and gateway requests are rejected; use a direct HTTPS endpoint. **Allow and retry** requests access after a user click; declining leaves source links available. Revoke optional access through the browser's extension management page. Requests omit cookies and referrers. Arweave transaction content is requested directly from its calculated sandbox subdomain, with host access checked for that destination. HTTP redirects, including same-host redirects, are blocked before following them; outbound links use the browser's normal navigation behavior. See [verification notes](VERIFICATION.md) for the tested security boundaries.
 
@@ -283,6 +285,8 @@ npm run package:store
 
 Packaging checks the store manifest version and required entry points and legal/privacy files. It uses Node.js without a system archive tool. Entries have fixed timestamps and stable ordering; unchanged inputs on the same toolchain produce identical archives. Repeating the command replaces that version's local artifacts. Packaging does not publish or run browser tests.
 
+Download the [1.0.1 corresponding source archive](https://github.com/c0ncep7/tokint/releases/download/v1.0.1/tokint-1.0.1-source.zip) or view [the release and checksums](https://github.com/c0ncep7/tokint/releases/tag/v1.0.1). The [public privacy policy](https://c0ncep7.github.io/tokint/public/privacy.html) matches the bundled policy.
+
 TOKINT is licensed under **GPL-2.0-only**; see [LICENSE](LICENSE) and [distribution requirements](DISTRIBUTION.md). Make the matching source archive available alongside each binary release. Before submission, publish the [privacy policy](public/privacy.html) at a public HTTPS URL, complete the listing and reviewer fields in [docs/WEB_STORE.md](docs/WEB_STORE.md), and perform the separate real-world release checks in [VERIFICATION.md](VERIFICATION.md).
 
 For the complete automated release checks:
@@ -306,6 +310,7 @@ Browser tests use temporary profiles and local fixtures, with output under `test
 | `npm run test:opensea` | Actual toolbar actions, including generic token URLs |
 | `npm run test:cache` / `npm run test:alchemy` | Focused browser suites |
 | `npm run test:live` | Optional read-only mainnet and IPFS checks; requires network access |
+| `npm run test:vault` | First-use confirmation, legacy plaintext migration, ciphertext inspection, full browser restart, wrong-passphrase rejection and cross-tab locking |
 | `npm run test:security` | Real-browser redirect consent, RPC POST isolation, metadata resource bounds, and preview limits |
 | `npm run test:release` | Typecheck, units, build, and all standard browser suites including offline conversion and security |
 

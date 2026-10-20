@@ -1,6 +1,6 @@
 {
   "name": "tokint",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "type": "module",
   "scripts": {
@@ -18,8 +18,9 @@
     "test:cache": "node scripts/cache-browser-test.mjs",
     "test:alchemy": "node scripts/alchemy-browser-test.mjs",
     "check": "npm run typecheck && npm test && npm run build",
-    "test:release": "npm run check && npm run test:browser && npm run test:config && npm run test:opensea && npm run test:offline && npm run test:security",
-    "package:store": "npm run release"
+    "test:release": "npm run check && npm run test:browser && npm run test:config && npm run test:opensea && npm run test:offline && npm run test:security && npm run test:vault",
+    "package:store": "npm run release",
+    "test:vault": "node scripts/vault-browser-test.mjs"
   },
   "dependencies": {
     "gifenc": "^1.0.3",

@@ -1,3 +1,4 @@
+import { prepareVault } from './vault-browser-helpers.mjs';
 import { chromium } from 'playwright';
 import { encodeAbiParameters } from 'viem';
 import assert from 'node:assert/strict';
@@ -25,6 +26,7 @@ const slowGate = new Promise(resolve => { releaseSlow = resolve; });
 const errors = [];
 try {
   const worker = context.serviceWorkers()[0] || await context.waitForEvent('serviceworker');
+  await prepareVault(context, worker);
   const extensionId = new URL(worker.url()).host;
   const page = await context.newPage();
   page.on('pageerror', error => errors.push(error.message));
@@ -58,6 +60,7 @@ try {
     try { await route.fulfill({ contentType: `image/${extension === 'jpg' ? 'jpeg' : extension}`, body: fixtures[extension] }); } catch { /* Superseded request. */ }
   });
   await page.goto(`chrome-extension://${extensionId}/results.html`);
+  await page.waitForFunction(() => document.querySelector('.shell')?.inert === false);
   async function submit(id, method = 'auto') {
     await page.locator('#contract').fill(contract); await page.locator('#token').fill(String(id)); await page.locator('#method').selectOption(method);
     await page.locator('#token').press('Enter');

@@ -1,3 +1,4 @@
+import { prepareVault, saveTestSettings } from './vault-browser-helpers.mjs';
 import { chromium } from 'playwright';
 import { encodeAbiParameters } from 'viem';
 import { CID } from 'multiformats/cid';
@@ -32,6 +33,7 @@ try {
   const worker = context.serviceWorkers()[0] || await context.waitForEvent('serviceworker');
   const extensionId = new URL(worker.url()).host;
   await worker.evaluate(() => chrome.storage.local.set({ settings: { rpcUrl: 'https://ethereum-rpc.publicnode.com', gatewayUrl: 'https://dweb.link', gatewayStyle: 'subdomain' } }));
+  await prepareVault(context, worker);
   const page = await context.newPage();
   page.on('pageerror', e => errors.push(e.message));
   await context.route('https://ethereum-rpc.publicnode.com/**', async route => {
@@ -111,6 +113,7 @@ try {
   assert.deepEqual(permissions, [true, true, true, false, false]);
   check('Arweave root and subdomains have default access; unrelated lookalike hosts do not');
   await page.goto(`chrome-extension://${extensionId}/results.html`);
+  await page.waitForFunction(() => document.querySelector('.shell')?.inert === false);
   assert.equal(rpcCount, 0);
   assert.equal(await page.locator('#fullscreen-media').isVisible(), false);
   assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).backgroundColor), 'rgb(0, 0, 0)');
@@ -258,7 +261,7 @@ try {
   assert.equal(await page.locator('#theme-toggle').getAttribute('aria-label'), 'Switch to light mode');
   check('light/dark toggle persists across reload and exposes an accessible label');
   check('ERC-721 lookup, JSON, relative image, SVG decoding and outbound links');
-  const upgraded = await worker.evaluate(() => chrome.storage.local.get(['settings', 'settingsVersion']));
+  const upgraded = await page.evaluate(async () => ({ settings: await (await import(chrome.runtime.getURL('storage.js'))).getSettings(), settingsVersion: (await chrome.storage.local.get('settingsVersion')).settingsVersion }));
   assert.equal(upgraded.settings.gatewayUrl, 'https://gateway.pinata.cloud');
   assert.equal(upgraded.settingsVersion, 2);
   check('legacy dweb settings migrate to Pinata on first lookup');
@@ -398,6 +401,7 @@ try {
   await page.keyboard.press('Escape');
   check('fullscreen media fits the narrow viewport');
   await page.goto(`chrome-extension://${extensionId}/options.html`);
+  await page.waitForFunction(() => document.querySelector('.shell')?.inert === false);
   await page.waitForFunction(() => document.querySelector('#gateway-preset').value === 'pinata');
   assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), 'dark');
   check('settings and inspector share the saved theme');
@@ -434,14 +438,16 @@ try {
   await page.setViewportSize({ width: 1100, height: 1050 });
   await page.screenshot({ path: 'test-results/gateway-settings.png', fullPage: true });
   await page.goto(`chrome-extension://${extensionId}/results.html`);
+  await page.waitForFunction(() => document.querySelector('.shell')?.inert === false);
   await page.waitForFunction(c => document.querySelector('#contract').value === c, contract);
   assert.equal(await page.locator('#token').inputValue(), '');
   check('last contract is retained without automatically fetching a token');
   // The registered toolbar callback is tested with a tab payload in unit tests;
   // exercise its resulting deep link with the loaded extension and real UI here.
-  await worker.evaluate(() => chrome.storage.local.set({ settings: { rpcUrl: 'https://ethereum-rpc.publicnode.com', gatewayUrl: 'https://gateway.pinata.cloud', gatewayStyle: 'path' }, settingsVersion: 2 }));
+  await saveTestSettings(page, { rpcUrl: 'https://ethereum-rpc.publicnode.com', gatewayUrl: 'https://gateway.pinata.cloud', gatewayStyle: 'path' });
   const deepLink = new URLSearchParams({ contract, token: '1', run: '1' });
   await page.goto(`chrome-extension://${extensionId}/results.html#${deepLink}`);
+  await page.waitForFunction(() => document.querySelector('.shell')?.inert === false);
   await page.waitForFunction(() => !document.querySelector('#image').hidden);
   assert.equal(await page.locator('#contract').inputValue(), contract);
   assert.equal(await page.locator('#token').inputValue(), '1');

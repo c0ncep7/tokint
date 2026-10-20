@@ -1,12 +1,12 @@
 # Chrome Web Store submission notes
 
-Prepared for TOKINT 1.0.0. These are copy-ready answers for the publisher's
+Prepared for TOKINT 1.0.1. These are copy-ready answers for the publisher's
 dashboard, not evidence that the extension has been submitted or approved.
 
 ## Package
 
 Run `npm ci`, `npm run test:release`, and `npm run package:store` with Node.js 22+.
-Upload `releases/1.0.0/tokint-1.0.0-chrome-web-store.zip`. The production packaging
+Upload `releases/1.0.1/tokint-1.0.1-chrome-web-store.zip`. The production packaging
 step puts `manifest.json` at the ZIP root and validates entry points, versions,
 icons, and legal/privacy files. The other binary ZIP is for manual installation.
 There is one extension and one keyword, `tokint`; no companion or extension-ID
@@ -21,7 +21,7 @@ convert associated media locally.
 
 | Permission | Dashboard explanation |
 | --- | --- |
-| `storage` | Saves the user's RPC/gateway preferences and last entered contract locally. Recent-token metadata/media use local IndexedDB. Data is not synced to a developer server. |
+| `storage` | Saves AES-256-GCM encrypted RPC/gateway preferences, last contract and theme locally. Recent-token metadata/media are encrypted in IndexedDB. Unlock keys exist only in trusted-context Chrome session storage and clear on lock or full browser exit. No developer-server sync. |
 | `activeTab` | Reads the current tab URL only when the user invokes the toolbar action, to extract an Ethereum contract and token ID and open the inspector. No continuous browsing monitoring or page-content injection. |
 | `https://ethereum-rpc.publicnode.com/*` | Default Ethereum mainnet RPC for read-only contract/interface and metadata-URI calls. |
 | `https://gateway.pinata.cloud/*` | Default IPFS gateway for metadata and media referenced by the user's lookup. |
@@ -53,7 +53,7 @@ of public wallet/account identifiers; TOKINT never accesses payment credentials.
 | --- | --- |
 | Personally identifiable information | User-entered public wallet/account addresses can identify a person. Providers also receive the network IP address needed to answer a request. No name/email form or developer account system. |
 | Financial and payment information | Public wallet/NFT ownership and mint information requested for inspection. No bank details, card details, payment processing, private keys, or signing. |
-| Authentication information | Optional user-provided Alchemy API key (or authentication-bearing custom endpoint) is saved locally and sent only to the configured provider. |
+| Authentication information | A user-created vault passphrase is processed locally, never saved or transmitted. Optional Alchemy API keys or authentication-bearing endpoints are encrypted locally and sent only to the configured provider when requested. |
 | Location | IP address visible to providers as connection metadata only. No geolocation permission, GPS, or location inference by TOKINT. |
 | Web history | Active tab URL read on toolbar activation and resource URLs requested for the user's token/IPFS lookup. No browser-history API or background browsing surveillance. |
 | User activity | Explicit lookup inputs and recent-token selections retained locally for the feature. No clickstream analytics, mouse tracking, or keystroke monitoring. |
@@ -86,13 +86,15 @@ Choose your RPC and IPFS gateway in Settings. Optional Alchemy support adds
 collection/wallet browsing and ownership information. No wallet connection or
 account is required for core features. Lookups go directly to providers, which
 receive the requested identifiers and your IP address. Recent tokens and cached
-media stay in your browser profile and can be cleared. See the privacy policy
+media stay encrypted in your browser profile and can be cleared. Set a local unlock passphrase at first use; unlock again after quitting Chrome. No passphrase recovery is available. See the privacy policy
 for permissions, local storage, and provider disclosures.
 
 ## Reviewer instructions
 
-1. Install the single extension. Open Settings and inspect the default PublicNode
-   RPC and Pinata gateway. No account or secret is required for the core path.
+1. Install the single extension. At first use, create and confirm a disposable
+   local passphrase of at least 12 characters. No account, publisher credentials,
+   or provider API key is required for the core path. Open Settings and inspect
+   the default PublicNode RPC and Pinata gateway.
 2. Type `tokint`, press Tab, and enter
    `0xff9c1b15b16263c61d017ee9f65c50e4ae0113d7 1` to request Loot #1.
    Public service availability is outside the extension's control.
@@ -102,20 +104,33 @@ for permissions, local storage, and provider disclosures.
    it opens through the configured gateway. Suggestions are computed locally.
 5. Additional resource hosts show an allow/retry control. Denial leaves an
    actionable error. Remote HTTP endpoints are rejected; loopback HTTP is supported.
-6. Alchemy features require the reviewer's own optional endpoint. Do not include
+6. In Settings, click **Lock saved data**, then unlock with your passphrase.
+   Quit Chrome completely and reopen it: TOKINT must ask for the passphrase again
+   and restore saved settings/recents after unlocking. Wrong passphrases are rejected.
+7. Alchemy features require the reviewer's own optional endpoint. Do not include
    a publisher API key in review notes or the uploaded package.
 
 The automated browser fixtures cover sandboxed HTML and local converters without
 requiring a live token to remain unchanged. See [verification](../VERIFICATION.md).
 
-## Publisher tasks reserved for the next steps
+## Published supporting pages and source
+
+- Privacy policy: https://c0ncep7.github.io/tokint/public/privacy.html
+- Support: https://github.com/c0ncep7/tokint/issues
+- Corresponding 1.0.1 source: https://github.com/c0ncep7/tokint/releases/download/v1.0.1/tokint-1.0.1-source.zip
+- Release and checksums: https://github.com/c0ncep7/tokint/releases/tag/v1.0.1
+
+The vault addresses the earlier unencrypted-storage finding. See `src/vault-crypto.ts`,
+`src/vault.ts`, `src/token-cache.ts`, and the migration/restart tests. Browser history,
+downloads and clipboard contents remain outside the vault, as disclosed in the policy.
+These implementation checks are not a claim of Google approval.
+
+## Final dashboard steps
 
 - Set up the publisher account, verification/2FA, support contact, listing images,
   screenshots, and distribution choices.
 - Host `public/privacy.html` at a public HTTPS URL, set the listing's support
   contact referenced by that policy, and enter the privacy URL in the dashboard.
-- Publish the matching source archive and link it from the listing/support site
-  as described in [distribution notes](../DISTRIBUTION.md).
-- Perform the separately planned live-provider and fresh stable-Chrome manual
-  smoke test, including actual `tokint` + Tab and native permission accept/deny.
+- Include the corresponding source link above in the store description or support page.
+- See [verification](../VERIFICATION.md) for the completed release checks.
 - Review final dashboard answers and upload the store ZIP. Packaging does not submit it.

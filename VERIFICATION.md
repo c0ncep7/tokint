@@ -1,8 +1,56 @@
 # Release preparation verification
 
-Updated: 2026-10-19. This records local implementation and automated verification;
-it is not Chrome Web Store approval or completion of the separately planned
-live-provider and native-browser acceptance checks.
+Updated: 2026-10-20 for version **1.0.1**. These are implementation and test
+results, not Chrome Web Store approval. Earlier dated results remain below as history.
+
+## 1.0.1 release checks: 2026-10-20
+
+- `npm run test:release` passed: strict TypeScript, **134 unit tests**, production
+  build, inspector (44), media selection/HTML, sharing (48), cache (15), Alchemy
+  (15), configuration, toolbar actions, offline JPEG/GIF/WebP, real-server security,
+  and encrypted-vault browser checks. Tests ran in disposable Chrome for Testing
+  **153.0.8010.12** profiles. The installed browser works when launched outside
+  the execution sandbox; earlier sandbox launch failures were environmental.
+- `npm run test:live` passed for Loot #1, The Memes #410 (direct Arweave metadata),
+  and BAYC #1 (IPFS metadata). Runtime `npm audit --omit=dev --audit-level=high`
+  reported **0 known vulnerabilities** on this date.
+- The vault uses Web Crypto AES-256-GCM with random 96-bit nonces, authenticated
+  record purposes, PBKDF2-HMAC-SHA-256 (600,000 iterations, random 128-bit salt),
+  and a separate HMAC-SHA-256 key for opaque cache identities. The passphrase is
+  never persisted. Derived keys live in trusted-context `chrome.storage.session`.
+  Persistent preferences and complete cached records/media are encrypted.
+- Tests cover nonce uniqueness, purpose binding, altered ciphertext/wrong key
+  rejection, preference and legacy IndexedDB migration, retry after migration
+  failure, byte-identical media restoration, and absence of plaintext fixture data
+  or unlock keys in local stores. A full browser close/relaunch loses the key,
+  rejects the wrong passphrase, and restores data with the correct passphrase.
+  Locking reloads all open pages and removes visible decrypted values.
+- SVG parsing now uses a disconnected XML fragment with an inert namespace,
+  preserving strict XML checks without attaching artwork to a document. This
+  avoids native Chrome CSP warnings from SVG style elements and attributes.
+  The browser conversion suite explicitly rejects CSP console errors; static,
+  SMIL/CSS animated, embedded-raster, hostile and malformed SVG cases are covered.
+  The inspector/media/sharing/cache/Alchemy and security suites were rerun after
+  this correction. Stable Chrome converted Loot SVG to 2000 × 2000 JPEG and its
+  Extensions panel showed no Errors entry after the test.
+- Inspector and Settings controls stay inert until saved data initializes. Browser
+  fixtures wait for that boundary before submitting inputs. The cache retains
+  offline reuse, expiry, cross-tab updates, stale-request protection and atomic
+  quota failure behavior. Network fetches retain `cache: no-store`.
+- Native stable **Google Chrome 155.0.8059.82** was tested in a separate signed-out
+  `TOKINT Release Test` profile. The extension loaded unpacked and displayed 1.0.1;
+  vault creation migrated the earlier test token. Actual `tokint` + Tab token
+  lookups loaded ERC-721 Loot #1 and ERC-1155 Freedom to Retract #410. Refresh
+  fetched the live sample, and the toolbar on its supported OpenSea URL opened
+  the correct token. An IPFS command opened Pinata and displayed the JSON; a bare contract opened
+  Etherscan at Read Contract.
+- Stable Chrome downloaded the original 19,733,254-byte PNG with SHA-256
+  `31daa4d1fca161b68aac81bc6a39e468eafbf5653f77438feddd60472541c4ed`,
+  matching the recorded source. The local JPEG was 1121 × 2000, 891,791 bytes.
+  Native optional-host denial displayed an actionable retry. With the publisher's
+  explicit approval, Chrome's **Allow** granted `eth.drpc.org` access in the
+  disposable profile; a live Loot #1 lookup then loaded its SVG and metadata
+  through that provider. Both native permission paths passed.
 
 ## Converted download filenames: 2026-10-19
 
@@ -81,7 +129,7 @@ Browser checks use Chrome for Testing 153.0.8010.12 with isolated temporary
 profiles, outside the filesystem sandbox. They use local fixtures and mocked
 provider responses; security and large-original cases use real loopback servers.
 No personal browser profile is used. Native permission denial is simulated in
-ordinary fixture tests; actual interactive prompt behavior is a later check.
+ordinary fixture tests; the dated 1.0.1 section records the separate stable-Chrome checks.
 
 ## Security baseline retained
 
@@ -97,18 +145,16 @@ Its online npm registry audit reported zero known vulnerabilities. This release
 preparation changes no dependency versions; that audit is not a guarantee against
 unknown vulnerabilities or a substitute for a fresh audit at publication time.
 
-## Separately scheduled publication steps
+## Publication status and remaining publisher actions
 
-- Publisher account, support contact, screenshots and listing assets.
-- Public HTTPS hosting for `public/privacy.html`; enter its URL in the dashboard.
-- Public access to the matching source archive for binary recipients, linked from
-  the store listing/support site; retain source and license notices for each version.
-- Live mainnet/IPFS checks (`npm run test:live`), including direct responses from
-  chosen providers rather than blocked HTTP redirects.
-- Fresh stable-Chrome installation and actual `tokint` + Tab commands; toolbar
-  lookup; native permission grant/denial; cache clearing and local downloads.
-- Final publisher review of listing/privacy fields and submission. The isolated
-  HTML-artwork remote-code declaration remains subject to store review.
+Privacy hosting: https://c0ncep7.github.io/tokint/public/privacy.html.
+Release/source distribution: https://github.com/c0ncep7/tokint/releases/tag/v1.0.1.
+The matching source archive and checksums must remain accessible with this binary.
+
+- Review the final listing/privacy answers in `docs/WEB_STORE.md`, public contact,
+  distribution choices and approved promotional images; upload the **1.0.1** store ZIP.
+- Submit for Google review. The isolated HTML-artwork remote-code declaration
+  remains subject to that review. No store upload or submission was performed here.
 
 Explicit original downloads, browser decoding, and HTML artwork can consume
 substantial resources. The application limits do not guarantee every token will

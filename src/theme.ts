@@ -1,5 +1,5 @@
-// Runs before the stylesheet so a saved light preference does not flash dark.
-const themeKey = 'tokint-theme';
+import { readPrivate, writePrivate, SESSION_KEY } from './vault';
+// Default dark while locked; restore the encrypted preference after unlock.
 type Theme = 'dark' | 'light';
 function applyTheme(value: string | null) {
   const theme: Theme = value === 'light' ? 'light' : 'dark';
@@ -12,24 +12,21 @@ function applyTheme(value: string | null) {
     button.setAttribute('aria-pressed', String(theme === 'light'));
   }
 }
-try {
-  let saved = localStorage.getItem(themeKey);
-  // Preserve a theme from an earlier app prefix without keeping obsolete keys.
-  for (const key of Object.keys(localStorage)) {
-    if (key === themeKey || !key.endsWith('-theme')) continue;
-    const value = localStorage.getItem(key);
-    if (value !== 'light' && value !== 'dark') continue;
-    if (saved === null) { saved = value; localStorage.setItem(themeKey, saved); }
-    localStorage.removeItem(key);
-  }
-  applyTheme(saved);
-} catch { applyTheme('dark'); }
+async function restoreTheme() {
+  try { applyTheme(await readPrivate<string>('theme') ?? 'dark'); }
+  catch { applyTheme('dark'); }
+}
+void restoreTheme();
 document.addEventListener('DOMContentLoaded', () => {
   applyTheme(document.documentElement.dataset.theme ?? 'dark');
   document.getElementById('theme-toggle')?.addEventListener('click', () => {
     const theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
     applyTheme(theme);
-    try { localStorage.setItem(themeKey, theme); } catch { /* Keep this page usable when storage is unavailable. */ }
+    void writePrivate('theme', theme).catch(() => {});
   });
 });
-window.addEventListener('storage', event => { if (event.key === themeKey || event.key === null) applyTheme(event.newValue); });
+window.addEventListener('tokint-vault-unlocked', () => { void restoreTheme(); });
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === 'local' && changes.theme) void restoreTheme();
+  if (area === 'session' && changes[SESSION_KEY]?.oldValue && !changes[SESSION_KEY].newValue) applyTheme('dark');
+});

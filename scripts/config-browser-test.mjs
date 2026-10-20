@@ -1,3 +1,4 @@
+import { prepareVault } from './vault-browser-helpers.mjs';
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm, mkdir } from 'node:fs/promises';
@@ -18,9 +19,11 @@ try {
   const invalidCsp = [];
   page.on('console', message => { if (/invalid source/i.test(message.text())) invalidCsp.push(message.text()); });
   const main = context.serviceWorkers()[0] ?? await context.waitForEvent('serviceworker');
+  await prepareVault(context, main);
   const mainId = new URL(main.url()).host;
   const options = `chrome-extension://${mainId}/options.html`;
   await page.goto(options);
+  await page.waitForFunction(() => document.querySelector('.shell')?.inert === false);
   await page.waitForFunction(() => document.querySelector('#rpc-preset').value === 'publicnode');
   assert.equal(await page.locator('#rpc-preset option').count(), 5);
   for (const [preset, url] of [['drpc', 'https://eth.drpc.org/'], ['1rpc', 'https://public.1rpc.io/eth']]) {
@@ -93,6 +96,7 @@ try {
   assert.ok(new URLSearchParams(new URL(invalid).hash.slice(1)).has('error'));
   check('invalid inputs open local errors');
   await page.goto(`chrome-extension://${mainId}/results.html`);
+  await page.waitForFunction(() => document.querySelector('.shell')?.inert === false);
   assert.equal(await page.locator('label[for="raw-uri"]').textContent(), 'Metadata endpoint');
   assert.equal(await page.locator('label[for="resolved-uri"]').textContent(), 'Metadata URL');
   assert.equal(await page.locator('#read-contract svg').count(), 1);

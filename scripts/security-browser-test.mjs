@@ -1,3 +1,4 @@
+import { prepareVault, saveTestSettings } from './vault-browser-helpers.mjs';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
@@ -61,16 +62,18 @@ try {
     args: [`--disable-extensions-except=${extension}`, `--load-extension=${extension}`],
   });
   const worker = context.serviceWorkers()[0] || await context.waitForEvent('serviceworker');
+  await prepareVault(context, worker);
   const page = await context.newPage();
   const errors = []; page.on('pageerror', error => errors.push(error.message));
   await page.goto(`chrome-extension://${new URL(worker.url()).host}/results.html`);
+  await page.waitForFunction(() => document.querySelector('.shell')?.inert === false);
   assert.equal(await page.evaluate(() => chrome.permissions.contains({ origins: ['http://127.0.0.1/*'] })), false);
   // Positive control: the old fetch policy reaches B and returns to A, despite
   // B having no extension grant. This ensures zero target requests is meaningful.
   await page.evaluate(async url => { await (await fetch(url, { credentials: 'omit', referrerPolicy: 'no-referrer' })).text(); }, `${allowed}/redirect-return`);
   assert.ok(requests.some(req => req.host === new URL(denied).host && req.path === '/bounce'));
   assert.ok(requests.some(req => req.path === '/final'));
-  await page.evaluate(rpcUrl => chrome.storage.local.set({ settings: { rpcUrl, gatewayUrl: 'https://gateway.pinata.cloud', gatewayStyle: 'path' }, settingsVersion: 2 }), `${allowed}/rpc`);
+  await saveTestSettings(page, { rpcUrl: `${allowed}/rpc`, gatewayUrl: 'https://gateway.pinata.cloud', gatewayStyle: 'path' });
   async function submit(id) {
     requests.length = 0;
     await page.locator('#contract').fill(contract);
@@ -99,7 +102,7 @@ try {
   assert.equal(await page.locator('#image').isVisible(), false);
   assert.equal(await page.locator('#share-media').isVisible(), true);
   console.log('PASS oversized automatic preview is stopped and original-download controls remain available');
-  await page.evaluate(rpcUrl => chrome.storage.local.set({ settings: { rpcUrl, gatewayUrl: 'https://gateway.pinata.cloud', gatewayStyle: 'path' }, settingsVersion: 2 }), `${allowed}/rpc-redirect`);
+  await saveTestSettings(page, { rpcUrl: `${allowed}/rpc-redirect`, gatewayUrl: 'https://gateway.pinata.cloud', gatewayStyle: 'path' });
   await submit(8);
   await page.waitForFunction(() => document.querySelector('#status').textContent.includes('redirects are blocked'));
   assert.ok(requests.some(req => req.path === '/rpc-redirect' && req.method === 'POST'));

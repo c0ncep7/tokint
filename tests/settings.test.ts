@@ -2,6 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { DEFAULTS, GATEWAYS, resolveUri } from '../src/core';
 import { getSettings, restoreSettings, saveSettings } from '../src/storage';
+import { migratePreferences, openVault } from '../src/vault';
+import { storageFixture, TEST_PASSPHRASE } from './vault-fixture';
 const cid = 'bafybeie5nqv6kd3qnfjuprw2scvubkste4aq4oqasmoyzqmgtiqq4iqjqa';
 test('new installations use Pinata path URLs for metadata and IPFS commands', () => {
   assert.equal(restoreSettings().gatewayUrl, 'https://gateway.pinata.cloud');
@@ -30,13 +32,11 @@ test('all public presets produce valid CID paths with their configured format', 
   }
 });
 test('storage saves the migration marker and respects later dweb selections', async () => {
-  let state: Record<string, unknown> = { settings: { ...DEFAULTS, gatewayUrl: 'https://dweb.link', gatewayStyle: 'subdomain' }, lastContract: 'keep-me' };
-  Object.assign(globalThis, { chrome: { storage: { local: {
-    get: async () => ({ ...state }), set: async (values: Record<string, unknown>) => { state = { ...state, ...values }; },
-  } } } });
+  const { local: state } = storageFixture({ settings: { ...DEFAULTS, gatewayUrl: 'https://dweb.link', gatewayStyle: 'subdomain' }, lastContract: 'keep-me' });
+  await openVault(TEST_PASSPHRASE, migratePreferences);
   assert.equal((await getSettings()).gatewayUrl, DEFAULTS.gatewayUrl);
   assert.equal(state.settingsVersion, 2);
-  assert.equal(state.lastContract, 'keep-me');
+  assert.ok(!JSON.stringify(state).includes('keep-me'));
   await saveSettings({ ...DEFAULTS, gatewayUrl: 'https://dweb.link', gatewayStyle: 'subdomain' });
   assert.equal((await getSettings()).gatewayUrl, 'https://dweb.link');
 });

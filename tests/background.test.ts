@@ -2,12 +2,22 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { CID } from 'multiformats/cid';
 import { DEFAULTS, type Settings } from '../src/core';
+import { saveSettings } from '../src/storage';
+import { lockVault, migratePreferences, openVault } from '../src/vault';
+import { storageFixture, TEST_PASSPHRASE } from './vault-fixture';
 
 test('omnibox events route addresses, tokens and IPFS with the requested tab disposition', async () => {
   let entered: (text: string, disposition: string) => void = () => {};
   let changed: (text: string, suggest: (results: unknown[]) => void) => void = () => {};
   let storedReads = 0;
   let prefs: Settings = DEFAULTS;
+  const fixture = storageFixture({ settings: prefs, settingsVersion: 2 });
+  await openVault(TEST_PASSPHRASE, migratePreferences);
+  const storedGet = fixture.storage.local.get.bind(fixture.storage.local);
+  fixture.storage.local.get = (async (...args: unknown[]) => {
+    storedReads++;
+    return storedGet(args[0] as string);
+  }) as typeof fixture.storage.local.get;
   const navigations: { kind: string; url: string; active?: boolean }[] = [];
   const suggestions: { description: string }[] = [];
   const fake = {
@@ -18,7 +28,7 @@ test('omnibox events route addresses, tokens and IPFS with the requested tab dis
       setDefaultSuggestion: async (value: { description: string }) => { suggestions.push(value); },
     },
     runtime: { getURL: (file: string) => `chrome-extension://test/${file}` },
-    storage: { local: { get: async () => { storedReads++; return { settings: prefs, settingsVersion: 2 }; } } },
+    storage: fixture.storage,
     tabs: {
       get: async () => { throw new Error('Tab unavailable'); },
       query: async () => [],
@@ -33,7 +43,13 @@ test('omnibox events route addresses, tokens and IPFS with the requested tab dis
   assert.match(suggestions.at(-1)!.description, /metadata/);
   assert.equal(storedReads, 0);
   assert.equal(navigations.length, 0);
-  const turn = () => new Promise(resolve => setImmediate(resolve));
+  let expected = 0;
+  const turn = async () => {
+    expected++;
+    const end = Date.now() + 3000;
+    while (navigations.length < expected && Date.now() < end) await new Promise(resolve => setTimeout(resolve, 5));
+    assert.equal(navigations.length, expected);
+  };
   entered(contract, 'currentTab'); await turn();
   assert.deepEqual(navigations.at(-1), { kind: 'update', url: `https://etherscan.io/address/${contract}#readContract` });
   entered(`${contract} 9007199254740993123`, 'newForegroundTab'); await turn();
@@ -44,10 +60,14 @@ test('omnibox events route addresses, tokens and IPFS with the requested tab dis
   entered(`ipfs://${cid}/metadata.json`, 'newBackgroundTab'); await turn();
   assert.deepEqual(navigations.at(-1), { kind: 'create', url: `https://gateway.pinata.cloud/ipfs/${cid}/metadata.json`, active: false });
   prefs = { ...DEFAULTS, gatewayUrl: 'https://dweb.link', gatewayStyle: 'subdomain' };
+  await saveSettings(prefs);
   entered(`https://gateway.pinata.cloud/ipfs/${cid}/nested/art%20work.svg?download=1#frame`, 'currentTab'); await turn();
   assert.deepEqual(navigations.at(-1), { kind: 'update', url: `https://${cid}.ipfs.dweb.link/nested/art%20work.svg?download=1#frame` });
   entered(`${cid}/nested/art.svg`, 'newForegroundTab'); await turn();
   assert.deepEqual(navigations.at(-1), { kind: 'create', url: `https://${cid}.ipfs.dweb.link/nested/art.svg`, active: true });
   entered('invalid text', 'currentTab'); await turn();
   assert.equal(new URLSearchParams(new URL(navigations.at(-1)!.url).hash.slice(1)).has('error'), true);
+  await lockVault();
+  entered(`ipfs://${cid}/metadata.json`, 'currentTab'); await turn();
+  assert.equal(new URLSearchParams(new URL(navigations.at(-1)!.url).hash.slice(1)).get('ipfs'), `ipfs://${cid}/metadata.json`);
 });

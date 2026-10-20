@@ -1,3 +1,4 @@
+import { readPrivate, writePrivate } from './vault';
 import { DEFAULTS, settings, type Settings } from './core';
 const SETTINGS_VERSION = 2;
 export function restoreSettings(saved?: Partial<Settings>, version?: number): Settings {
@@ -11,11 +12,11 @@ export function restoreSettings(saved?: Partial<Settings>, version?: number): Se
   return value;
 }
 export async function getSettings(): Promise<Settings> {
-  const stored = await chrome.storage.local.get(['settings', 'settingsVersion']);
+  const stored = { settings: await readPrivate<Partial<Settings>>('settings'), settingsVersion: (await chrome.storage.local.get('settingsVersion')).settingsVersion };
   const value = restoreSettings(stored.settings, stored.settingsVersion);
   if (stored.settings && stored.settingsVersion !== SETTINGS_VERSION) await saveSettings(value);
   return value;
 }
-export async function saveSettings(value: Settings) { await chrome.storage.local.set({ settings: settings(value), settingsVersion: SETTINGS_VERSION }); }
-export async function getLastContract(): Promise<string> { return (await chrome.storage.local.get('lastContract')).lastContract ?? ''; }
-export async function saveLastContract(value: string) { await chrome.storage.local.set({ lastContract: value }); }
+export async function saveSettings(value: Settings) { await writePrivate('settings', settings(value)); await chrome.storage.local.set({ settingsVersion: SETTINGS_VERSION }); }
+export async function getLastContract(): Promise<string> { return (await readPrivate<string>('lastContract')) ?? ''; }
+export async function saveLastContract(value: string) { await writePrivate('lastContract', value); }

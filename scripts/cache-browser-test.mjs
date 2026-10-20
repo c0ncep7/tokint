@@ -1,3 +1,4 @@
+import { prepareVault, saveTestSettings } from './vault-browser-helpers.mjs';
 import { chromium } from 'playwright';
 import { encodeAbiParameters } from 'viem';
 import assert from 'node:assert/strict';
@@ -20,25 +21,14 @@ const counts = () => [rpc, metadata, images];
 const svg = rev => `<svg xmlns="http://www.w3.org/2000/svg" width="${100 + rev}" height="100"><rect width="100%" height="100%" fill="${rev === 1 ? 'green' : 'purple'}"/></svg>`;
 // Inspect/mutate only this test profile's IndexedDB, never a user's profile.
 async function records(page, operation = 'read', token) {
-  return page.evaluate(({ operation, token }) => new Promise((resolve, reject) => {
-    const open = indexedDB.open('tokint-recents', 1);
-    open.onerror = () => reject(open.error);
-    open.onsuccess = () => {
-      const db = open.result;
-      const tx = db.transaction('tokens', operation === 'read' ? 'readonly' : 'readwrite');
-      const store = tx.objectStore('tokens');
-      let rows;
-      const request = store.getAll();
-      request.onsuccess = () => {
-        rows = request.result;
-        for (const row of rows) {
-          if (operation === 'expire' && row.token === token) { row.snapshot.fetchedAt -= 25 * 60 * 60 * 1000; store.put(row); }
-        }
-      };
-      tx.oncomplete = () => { db.close(); resolve(rows.map(r => ({ ...r, snapshot: r.snapshot && { ...r.snapshot, image: r.snapshot.image && { url: r.snapshot.image.url, size: r.snapshot.image.blob.size } } }))); };
-      tx.onerror = () => reject(tx.error);
-    };
-  }), { operation, token });
+  return page.evaluate(async ({ operation, token }) => {
+    const cache = await import(chrome.runtime.getURL('token-cache.js'));
+    const saved = await cache.readCache();
+    if (operation === 'expire') await cache.updateCache(saved.epoch, rows => rows.map(row => row.token === token
+      ? { ...row, snapshot: { ...row.snapshot, fetchedAt: row.snapshot.fetchedAt - 25 * 60 * 60 * 1000 } } : row));
+    return (await cache.readCache()).rows.map(r => ({ ...r, snapshot: r.snapshot && { ...r.snapshot,
+      image: r.snapshot.image && { url: r.snapshot.image.url, size: r.snapshot.image.blob.size } } }));
+  }, { operation, token });
 }
 async function saved(page, token) {
   for (let i = 0; i < 100; i++) {
@@ -49,6 +39,7 @@ async function saved(page, token) {
 }
 try {
   const worker = context.serviceWorkers()[0] || await context.waitForEvent('serviceworker');
+  await prepareVault(context, worker);
   const root = `chrome-extension://${new URL(worker.url()).host}`;
   await context.route('https://ethereum-rpc.publicnode.com/**', async route => {
     rpc++; if (offline) return route.fulfill({ status: 503, body: 'Offline fixture' });
@@ -75,11 +66,12 @@ try {
   const page = await context.newPage(); page.on('pageerror', e => errors.push(e.message));
   await page.goto(`${root}/results.html`);
   const submit = async (token, method = 'auto', target = page) => {
+    await target.waitForFunction(() => !document.querySelector('.shell').inert);
     await target.locator('#contract').fill(contract); await target.locator('#token').fill(String(token));
     await target.locator('#method').selectOption(method);
     await target.locator('#lookup-form').evaluate(form => form.requestSubmit());
   };
-  const loaded = (target = page) => target.waitForFunction(() => !document.querySelector('#image').hidden && document.querySelector('#image').naturalWidth > 0);
+  const loaded = (target = page) => target.waitForFunction(() => !document.querySelector('#image').hidden && document.querySelector('#image').naturalWidth > 0).catch(async error => { console.error('Cache fixture state:', await target.evaluate(() => ({ status: document.querySelector('#status').textContent, note: document.querySelector('#image-note').textContent, contract: document.querySelector('#contract').value, token: document.querySelector('#token').value, inert: document.querySelector('.shell').inert })), { errors, rpc, metadata, images }); throw error; });
   await submit(1); await loaded(); await saved(page, 1);
   assert.equal(await page.locator('#cache-status').textContent(), '');
   assert.equal(await page.locator('#recent-tokens option').count(), 2);
@@ -121,7 +113,7 @@ try {
   const beforeExpiry = rpc; await submit(1, 'uri'); await loaded();
   assert.ok(rpc > beforeExpiry);
   check('expired snapshots trigger a fresh lookup');
-  await worker.evaluate(() => chrome.storage.local.set({ settingsVersion: 2, settings: { rpcUrl: 'https://ethereum-rpc.publicnode.com/?fixture=new', gatewayUrl: 'https://gateway.pinata.cloud', gatewayStyle: 'path' } }));
+  await saveTestSettings(page, { rpcUrl: 'https://ethereum-rpc.publicnode.com/?fixture=new', gatewayUrl: 'https://gateway.pinata.cloud', gatewayStyle: 'path' });
   const beforeSettings = rpc; await submit(1, 'uri'); await loaded();
   assert.ok(rpc > beforeSettings);
   check('changing provider configuration invalidates cache reuse');

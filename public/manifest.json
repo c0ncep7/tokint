@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "TOKINT",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Contract, NFT metadata, and IPFS lookups from your address bar. Type tokint, then Tab.",
   "minimum_chrome_version": "109",
   "omnibox": {

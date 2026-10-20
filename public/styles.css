@@ -97,3 +97,15 @@ select{appearance:none;padding-right:32px;background-image:url("data:image/svg+x
 .token-service-links{display:flex;align-items:center;gap:4px;margin-left:auto}.token-service-link{width:28px;height:28px;padding:3px}.token-service-link img{display:block;width:20px;height:20px;object-fit:contain}
 
 .html-stage{position:absolute;inset:7.5%}.fullscreen-html-stage{width:100%;height:100%}.html-media{display:block;width:100%;height:100%;border:0;background:transparent}.html-export-stage{position:fixed;left:-10000px;top:0;width:512px;height:512px;pointer-events:none}
+
+/* The modal gates application initialization until saved data is unlocked. */
+.vault-dialog{width:min(460px,calc(100vw - 32px));padding:28px;border:1px solid var(--border,#333);border-radius:8px;background:var(--panel,#111);color:var(--text,#eee)}
+.vault-dialog::backdrop{background:rgba(0,0,0,.92)}
+.vault-dialog h1{font-size:23px;margin:0 0 14px}
+.vault-dialog p{font-size:13px;line-height:1.6}
+.vault-dialog label{display:grid;gap:7px;margin:17px 0;font-size:13px}
+.vault-dialog input{width:100%;padding:10px}
+.vault-dialog button{margin-top:8px}
+.vault-settings{margin-bottom:18px}
+.vault-settings h2{font-size:16px;margin-top:0}
+.vault-settings p{font-size:13px;line-height:1.6}

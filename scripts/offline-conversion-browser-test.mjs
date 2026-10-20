@@ -1,3 +1,4 @@
+import { prepareVault } from './vault-browser-helpers.mjs';
 import { chromium } from 'playwright';
 import { encodeAbiParameters } from 'viem';
 import gifenc from 'gifenc';
@@ -15,6 +16,7 @@ try {
     args: [`--disable-extensions-except=${path.resolve('extension')}`, `--load-extension=${path.resolve('extension')}`],
   });
   const sw = context.serviceWorkers()[0] || await context.waitForEvent('serviceworker');
+  await prepareVault(context, sw);
   const origin = new URL(sw.url()).origin;
   // Node's URL origin is "null" for chrome-extension URLs.
   const extension = origin === 'null' ? `chrome-extension://${new URL(sw.url()).host}` : origin;
@@ -80,6 +82,7 @@ try {
       };
     }, mode);
     await page.goto(`${extension}/results.html`);
+    await page.waitForFunction(() => document.querySelector('.shell')?.inert === false);
     await page.locator('#contract').fill('0x0000000000000000000000000000000000000001');
     await page.locator('#token').fill(String(id)); await page.locator('#token').press('Enter');
     await page.waitForFunction(() => !document.querySelector('#image').hidden && !document.querySelector('#download-media').hidden);

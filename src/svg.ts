@@ -1,6 +1,7 @@
 import { fitDimensions, MAX_SOURCE_PIXELS, targetBytes, type ShareOptions, type ShareResult } from './share-core';
 
 const NS = 'http://www.w3.org/2000/svg';
+const INERT_NS = 'urn:tokint:inert-svg';
 const MAX_SVG_BYTES = 2 * 1024 * 1024;
 const animationTags = new Set(['animate', 'animateTransform', 'animateMotion', 'set']);
 // Embedded raster images are self-contained and can be decoded by the SVG
@@ -32,15 +33,28 @@ function clock(value: string): number {
 }
 function times(value: string): number[] { return value.split(';').map(clock); }
 
-// Parse in a detached XML document. Never insert artwork into the extension DOM.
+// Parse generic XML in a disconnected fragment. Never attach artwork to a
+// document. Keep stylesheet elements and style attributes inert until explicit
+// CSS inspection; restore the SVG namespace only when serializing an image.
 // Render only through an image element, which cannot execute SVG scripts.
 async function readSvgDocument(blob: Blob) {
   if (blob.size > MAX_SVG_BYTES) unsupported('SVG export is limited to 2 MiB of markup.');
   const text = await blob.text();
   if (/<!DOCTYPE|<!ENTITY|<\?xml-stylesheet/i.test(text)) unsupported('SVG document entities and linked stylesheets are not supported.');
-  const doc = new DOMParser().parseFromString(text, 'image/svg+xml');
-  const root = doc.documentElement;
-  if (doc.querySelector('parsererror') || root.localName !== 'svg' || root.namespaceURI !== NS) throw new Error('The SVG could not be parsed.');
+  if (text.includes(INERT_NS)) unsupported('Reserved XML namespace.');
+  // Generic XML elements have no active style attributes. Restore the original
+  // namespace only in the serialized image, never in a connected DOM tree.
+  const inertText = text.replaceAll(NS, INERT_NS);
+  const inert = document.createElement('template').content.ownerDocument;
+  const doc = inert.implementation.createDocument(null, '');
+  const range = doc.createRange();
+  range.selectNodeContents(doc);
+  let fragment: DocumentFragment;
+  try { fragment = range.createContextualFragment(inertText.replace(/^\s*<\?xml\s[^?]*\?>/i, '')); }
+  catch { throw new Error('The SVG could not be parsed.'); }
+  const root = fragment.firstElementChild;
+  if (!root || fragment.childElementCount !== 1 || root.localName !== 'svg' || root.namespaceURI !== INERT_NS
+    || [...fragment.childNodes].some(node => node.nodeType === Node.TEXT_NODE && node.textContent?.trim())) throw new Error('The SVG could not be parsed.');
   const viewBox = (root.getAttribute('viewBox') || '').trim().split(/[\s,]+/).map(Number);
   const dimension = (name: string, fallback: number) => {
     const value = root.getAttribute(name) || '';
@@ -66,6 +80,7 @@ export async function prepareSvg(blob: Blob): Promise<SvgPlan> {
   const smil: Timing[] = [];
   const sheets: { node: Element; sheet: CSSStyleSheet }[] = [];
   const css: CssTiming[] = [];
+  const inlineStyles: { node: Element; style: CSSStyleDeclaration }[] = [];
   let duration = 0;
   let hasKeyframes = false;
   let hasCssAnimation = false;
@@ -92,7 +107,7 @@ export async function prepareSvg(blob: Blob): Promise<SvgPlan> {
     hasCssAnimation = true;
   };
   for (const node of nodes) {
-    if (node.namespaceURI !== NS || ['script', 'foreignObject', 'a'].includes(node.localName)) unsupported('Scripted SVG, embedded HTML, and interactive links are not supported for export.');
+    if (node.namespaceURI !== INERT_NS || ['script', 'foreignObject', 'a'].includes(node.localName)) unsupported('Scripted SVG, embedded HTML, and interactive links are not supported for export.');
     for (const attr of Array.from(node.attributes)) {
       if (/^on/i.test(attr.localName) || attr.localName === 'base') unsupported('Scripted or interactive SVG is not supported for export.');
       if (attr.localName === 'href' && !localReference(attr.value)
@@ -120,7 +135,13 @@ export async function prepareSvg(blob: Blob): Promise<SvgPlan> {
       duration = Math.max(duration, ...begin.map(t => Math.max(0, t) + dur * count), ...(end || [0]));
       smil.push({ node, begin, end });
     }
-    if (node.hasAttribute('style')) inspectStyle((node as SVGElement).style);
+    if (node.hasAttribute('style')) {
+      const style = document.createElement('span').style;
+      style.cssText = node.getAttribute('style')!;
+      const count = css.length;
+      inspectStyle(style);
+      if (css.length > count) inlineStyles.push({ node, style });
+    }
     if (node.localName === 'style') {
       const source = node.textContent || '';
       if (/@import|@font-face|url\s*\(|\\|:hover|:active|:focus/i.test(withoutLocalUrls(source))) unsupported('Linked resources or interactive CSS are not supported for SVG export.');
@@ -159,7 +180,8 @@ export async function prepareSvg(blob: Blob): Promise<SvgPlan> {
         item.style.setProperty('animation-play-state', 'paused', item.priority);
       }
       for (const item of sheets) item.node.textContent = Array.from(item.sheet.cssRules, rule => rule.cssText).join('\n');
-      return new XMLSerializer().serializeToString(root);
+      for (const item of inlineStyles) item.node.setAttribute('style', item.style.cssText);
+      return new XMLSerializer().serializeToString(root).replaceAll(INERT_NS, NS);
     },
   };
 }

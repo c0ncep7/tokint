@@ -32,7 +32,7 @@ await mkdir('extension');
 await cp('public', 'extension', { recursive: true, filter: source => !source.endsWith('/tokint.svg') && !source.endsWith('/.DS_Store') });
 await writeFile('extension/gifsicle.wasm', Buffer.from(wasm[1], 'base64'));
 await writeFile('extension/gifsicle-runtime.js', '/* gifsicle-wasm-browser 1.5.19, MIT; see THIRD_PARTY_NOTICES.txt */\n' + runtime.slice(0, end + 1) + '\nexport default gifsicle;\n');
-await bundle({ entryPoints: ['src/background.ts', 'src/results.ts', 'src/options.ts', 'src/launcher.ts'], outdir: 'extension', bundle: true, format: 'esm', splitting: true, target: 'chrome109', minify: true, legalComments: 'eof' });
+await bundle({ entryPoints: ['src/background.ts', 'src/results.ts', 'src/options.ts', 'src/launcher.ts', 'src/storage.ts', 'src/vault.ts', 'src/token-cache.ts'], outdir: 'extension', bundle: true, format: 'esm', splitting: true, target: 'chrome109', minify: true, legalComments: 'eof' });
 await bundle({ entryPoints: ['src/theme.ts', 'src/html-media-sandbox.ts'], outdir: 'extension', bundle: true, format: 'iife', target: 'chrome109', minify: true });
 await bundle({ entryPoints: ['src/share-worker.ts', 'src/svg-worker.ts', 'src/conversion-capabilities-worker.ts'], external: ['./gifsicle-runtime.js'], outdir: 'extension', bundle: true, format: 'esm', target: 'chrome109', minify: true, legalComments: 'eof' });
 let notices = 'tokint — third-party dependency notices\n\nIncludes notices for runtime dependencies. Unused portions may be removed by the bundler.\n';

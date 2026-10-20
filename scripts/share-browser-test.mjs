@@ -1,3 +1,4 @@
+import { prepareVault } from './vault-browser-helpers.mjs';
 import { chromium } from 'playwright';
 import { encodeAbiParameters } from 'viem';
 import assert from 'node:assert/strict';
@@ -35,7 +36,7 @@ fixtures['animated.svg'] = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" 
 fixtures['still.svg'] = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10" fill="red"/></svg>');
 fixtures['fractional.svg'] = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="10.8" height="5.6"><rect width="10.8" height="5.6" fill="red"/></svg>');
 fixtures['fractional-animated.svg'] = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="10.8" height="5.6"><rect width="10.8" height="5.6" fill="red"><animate attributeName="fill" values="red;blue;red" dur="1s" repeatCount="indefinite"/></rect></svg>');
-fixtures['css.svg'] = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="80" height="40"><style>@keyframes color{from{fill:red}to{fill:blue}}rect{animation:color 2s linear infinite}</style><rect width="80" height="40"/></svg>');
+fixtures['css.svg'] = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="80" height="40"><style>@keyframes color{from{fill:red}to{fill:blue}}</style><rect width="80" height="40" style="animation:color 2s linear infinite"/></svg>');
 fixtures['large-svg.svg'] = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1000"><rect width="1000" height="1000" fill="red"><animate attributeName="fill" values="red;blue;red" dur="2s" repeatCount="indefinite"/></rect></svg>');
 fixtures['script.svg'] = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><script>fetch("https://svg-attacker.example/script")</script><rect width="10" height="10" fill="red"/></svg>');
 fixtures['external.svg'] = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><image href="https://svg-attacker.example/image"/></svg>');
@@ -70,8 +71,11 @@ const errors = [];
 try {
   await (async () => {
   const sw = context.serviceWorkers()[0] || await context.waitForEvent('serviceworker');
+  await prepareVault(context, sw);
   const extensionId = new URL(sw.url()).host;
   const page = await context.newPage();
+  const cspErrors = [];
+  page.on('console', message => { if (message.type() === 'error' && message.text().includes('Content Security Policy')) cspErrors.push(message.text()); });
   page.on('pageerror', error => errors.push(error.message));
   await context.route('https://ethereum-rpc.publicnode.com/**', async route => {
     const request = route.request().postDataJSON();
@@ -107,6 +111,7 @@ try {
     try { await route.fulfill({ contentType: filename.endsWith('.svg') ? 'image/svg+xml' : filename.endsWith('.gif') ? 'image/gif' : filename.endsWith('.webp') ? 'image/webp' : filename.endsWith('.png') ? 'image/png' : 'image/jpeg', body, headers }); } catch { /* cancellation */ }
   });
   await page.goto(`chrome-extension://${extensionId}/results.html`);
+  await page.waitForFunction(() => document.querySelector('.shell')?.inert === false);
   await page.evaluate(() => {
     const contains = chrome.permissions.contains.bind(chrome.permissions);
     chrome.permissions.contains = query => query.origins?.some(origin => origin.startsWith('http://127.0.0.1/')) ? Promise.resolve(true) : contains(query);
@@ -557,6 +562,7 @@ try {
   check('stalled conversion times out with a warning and no download (worker stall simulated)');
   await page.locator('#close-share-modal').click();
   assert.deepEqual(errors, []);
+  assert.deepEqual(cspErrors, [], 'SVG parsing must not execute inline styles or violate the extension CSP');
   console.log(`\n${count} sharing browser checks passed.`);
   })();
 } finally { largeServer.closeAllConnections(); largeServer.close(); await context.close().catch(() => {}); await rm(profile, { recursive: true, force: true }); }

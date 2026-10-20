@@ -1,3 +1,6 @@
+import { ensureVault, addLockButton } from './vault-ui';
+await ensureVault();
+addLockButton();
 import { setBusy } from './loading';
 import { RPC_PRESETS, rpcPreset, validateAlchemyRpc } from './rpc-presets';
 import { DEFAULTS, GATEWAYS, settings, type Settings } from './core';
@@ -42,7 +45,7 @@ function show(value: Settings) {
   updatePreset();
 }
 preset.addEventListener('change', updatePreset);
-getSettings().then(show).catch(e => { show(DEFAULTS); status.textContent = e.message; });
+getSettings().then(show).catch(e => { show(DEFAULTS); status.textContent = e.message; }).finally(() => document.querySelector<HTMLElement>('.shell')!.inert = false);
 document.querySelector('#settings-form')!.addEventListener('submit', event => {
   event.preventDefault();
   void (async () => {
