@@ -3,6 +3,19 @@ import { fitDimensions, MAX_SOURCE_PIXELS, targetBytes, type ShareOptions, type 
 const NS = 'http://www.w3.org/2000/svg';
 const MAX_SVG_BYTES = 2 * 1024 * 1024;
 const animationTags = new Set(['animate', 'animateTransform', 'animateMotion', 'set']);
+// Embedded raster images are self-contained and can be decoded by the SVG
+// image renderer. Keep network resources and nested documents out of exports.
+function embeddedRaster(value: string): boolean {
+  return /^data:image\/(?:png|jpeg|gif|webp|avif|bmp|x-icon|vnd\.microsoft\.icon)(?:;[^,]*)?,/i.test(value.trim());
+}
+function localReference(value: string): boolean { return /^#[^\s#]+$/.test(value.trim()); }
+function withoutLocalUrls(value: string): string {
+  return value.replace(/url\s*\(\s*(?:"([^"]*)"|'([^']*)'|([^'")\s]*))\s*\)/gi,
+    (match, double: string | undefined, single: string | undefined, unquoted: string | undefined) => {
+      const url = double ?? single ?? unquoted ?? '';
+      return localReference(url) || embeddedRaster(url) ? '' : match;
+    });
+}
 type Timing = { node: Element; begin: number[]; end?: number[] };
 type CssTiming = { style: CSSStyleDeclaration; delays: number[]; priority: string };
 export type SvgPlan = {
@@ -79,11 +92,12 @@ export async function prepareSvg(blob: Blob): Promise<SvgPlan> {
     hasCssAnimation = true;
   };
   for (const node of nodes) {
-    if (node.namespaceURI !== NS || ['script', 'foreignObject', 'image', 'feImage', 'a'].includes(node.localName)) unsupported('Scripted SVG, embedded HTML, and linked images are not supported for export.');
+    if (node.namespaceURI !== NS || ['script', 'foreignObject', 'a'].includes(node.localName)) unsupported('Scripted SVG, embedded HTML, and interactive links are not supported for export.');
     for (const attr of Array.from(node.attributes)) {
       if (/^on/i.test(attr.localName) || attr.localName === 'base') unsupported('Scripted or interactive SVG is not supported for export.');
-      if (attr.localName === 'href' && !attr.value.startsWith('#')) unsupported('External SVG resources are not supported for export.');
-      if (/url\s*\(/i.test(attr.value) && /url\s*\(\s*['"]?(?!#)/i.test(attr.value.replace(/url\s*\(\s*['"]?#[-\w:.]+['"]?\s*\)/gi, ''))) unsupported('External SVG resources are not supported for export.');
+      if (attr.localName === 'href' && !localReference(attr.value)
+        && !(['image', 'feImage'].includes(node.localName) && embeddedRaster(attr.value))) unsupported('External SVG resources are not supported for export.');
+      if (/url\s*\(/i.test(withoutLocalUrls(attr.value))) unsupported('External SVG resources are not supported for export.');
     }
     if (node.localName.startsWith('animate') && !animationTags.has(node.localName)) unsupported('This SVG animation element is not supported.');
     if (animationTags.has(node.localName)) {
@@ -109,7 +123,7 @@ export async function prepareSvg(blob: Blob): Promise<SvgPlan> {
     if (node.hasAttribute('style')) inspectStyle((node as SVGElement).style);
     if (node.localName === 'style') {
       const source = node.textContent || '';
-      if (/@import|@font-face|url\s*\(|\\|:hover|:active|:focus/i.test(source.replace(/url\s*\(\s*['"]?#[-\w:.]+['"]?\s*\)/gi, ''))) unsupported('Linked resources or interactive CSS are not supported for SVG export.');
+      if (/@import|@font-face|url\s*\(|\\|:hover|:active|:focus/i.test(withoutLocalUrls(source))) unsupported('Linked resources or interactive CSS are not supported for SVG export.');
       const sheet = new CSSStyleSheet(); sheet.replaceSync(source);
       const inspectRules = (rules: CSSRuleList, depth = 0) => {
         if (depth > 32) unsupported('SVG CSS nesting exceeds the local export limit.');

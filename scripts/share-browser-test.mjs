@@ -89,7 +89,7 @@ try {
     if (filename.endsWith('.json')) {
       const id = filename.split('.')[0];
       if (id === '8') slowAttempts = 0;
-      const image = ({ 1: 'wide.jpg', 2: 'moving.gif', 3: 'moving.webp', 4: 'oversized.jpg', 5: 'broken.gif', 6: 'large-download.jpg', 7: 'blocked.gif', 8: 'slow.jpg', 9: 'huge-download.jpg', 10: 'noise.png', 11: 'busy.gif', 12: 'still.gif', 13: 'still.webp', 14: 'animated.svg', 15: 'still.svg', 16: 'css.svg', 17: 'script.svg', 18: 'external.svg', 19: 'event.svg', 20: 'css-delay.svg', 21: 'smil-transform.svg', 22: 'large-svg.svg', 23: 'fractional.svg', 24: 'fractional-animated.svg', 25: 'responsive-shapes.svg', 26: 'bad-href.svg', 27: 'delta.gif' })[id] ?? 'wide.jpg';
+      const image = ({ 1: 'wide.jpg', 2: 'moving.gif', 3: 'moving.webp', 4: 'oversized.jpg', 5: 'broken.gif', 6: 'large-download.jpg', 7: 'blocked.gif', 8: 'slow.jpg', 9: 'huge-download.jpg', 10: 'noise.png', 11: 'busy.gif', 12: 'still.gif', 13: 'still.webp', 14: 'animated.svg', 15: 'still.svg', 16: 'css.svg', 17: 'script.svg', 18: 'external.svg', 19: 'event.svg', 20: 'css-delay.svg', 21: 'smil-transform.svg', 22: 'large-svg.svg', 23: 'fractional.svg', 24: 'fractional-animated.svg', 25: 'responsive-shapes.svg', 26: 'bad-href.svg', 27: 'delta.gif', 28: 'embedded-background.svg', 29: 'embedded-style.svg', 30: 'embedded-image.svg', 31: 'embedded-filter.svg', 32: 'mixed-resources.svg' })[id] ?? 'wide.jpg';
       await route.fulfill({ json: { name: `Sharing fixture ${id}`, image: image === 'huge-download.jpg' ? largeUrl : image === 'blocked.gif' ? 'https://sharing-denied.example/file.gif' : `${base}/${image}` } });
       return;
     }
@@ -116,6 +116,17 @@ try {
     ctx.fillStyle = 'red'; ctx.fillRect(0, 0, 10, 10);
     return Array.from(new Uint8Array(await (await canvas.convertToBlob({ type: 'image/webp' })).arrayBuffer()));
   }));
+  const embeddedPng = await page.evaluate(async () => {
+    const canvas = document.createElement('canvas'); canvas.width = canvas.height = 32;
+    const ctx = canvas.getContext('2d'); ctx.fillStyle = 'red'; ctx.fillRect(0, 0, 16, 32);
+    ctx.fillStyle = 'blue'; ctx.fillRect(16, 0, 16, 32);
+    return canvas.toDataURL('image/png');
+  });
+  fixtures['embedded-background.svg'] = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1200" style="background-image:url(${embeddedPng});background-size:contain;background-repeat:no-repeat;image-rendering:pixelated"/>`);
+  fixtures['embedded-style.svg'] = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><style>svg{background-image:url('${embeddedPng}');background-size:contain;image-rendering:pixelated}rect{animation:fade 1s linear infinite}@keyframes fade{from{opacity:0}to{opacity:1}}</style><rect width="32" height="32" fill="blue"/></svg>`);
+  fixtures['embedded-image.svg'] = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="32" height="32"><image width="32" height="32" xlink:href="${embeddedPng}" style="image-rendering:pixelated"><animate attributeName="opacity" values="1;0;1" dur="1s" repeatCount="indefinite"/></image></svg>`);
+  fixtures['embedded-filter.svg'] = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><defs><filter id="image" x="0" y="0" width="100%" height="100%"><feImage href="${embeddedPng}"/></filter></defs><rect width="32" height="32" filter="url(&quot;#image&quot;)"/></svg>`);
+  fixtures['mixed-resources.svg'] = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" style="background-image:url('${embeddedPng}'),url('https://svg-attacker.example/image')"/>`);
   assert.equal(await page.locator('#share-media').isVisible(), false);
   const submit = async id => {
     await page.locator('#contract').fill(contract); await page.locator('#token').fill(String(id)); await page.locator('#token').press('Enter');
@@ -319,7 +330,31 @@ try {
   assert.equal(info.count, 5); assert.equal(info.duration, 500);
   check('CSS keyframe SVG exports animated frames, preserves aspect ratio, and honors clip length and frame rate');
   await page.locator('#close-share-modal').click();
-  for (const id of [17, 18, 19, 26]) {
+  for (const id of [28, 31]) {
+    await submit(id); await open(); await page.locator('#share-edge').selectOption('2000');
+    await generate(); info = await inspectOutput();
+    assert.equal(info.type, 'image/jpeg'); assert.equal(info.width, 2000); assert.equal(info.height, 2000);
+    assert.ok(info.samples[0][0] > 240 && info.samples[0][1] < 10 && info.samples[0][2] < 10, 'embedded PNG must render red, not a blank background');
+    const original = await page.evaluate(async () => await (await fetch(document.querySelector('#download-media').href)).text());
+    assert.equal(original, fixtures[id === 28 ? 'embedded-background.svg' : 'embedded-filter.svg'].toString());
+    await page.locator('#close-share-modal').click();
+  }
+  check('embedded PNG CSS backgrounds and SVG filter images export JPEG at the selected size and preserve original bytes');
+  for (const id of [29, 30]) {
+    await submit(id); await open(); await page.locator('#share-svg-duration').waitFor({ state: 'visible' });
+    await page.locator('#share-edge').selectOption('500'); await page.locator('#share-fps').selectOption('10');
+    await page.locator('#share-svg-duration').fill('1');
+    for (const format of ['gif', 'webp']) {
+      await page.locator('#share-format').selectOption(format); await generate(); info = await inspectOutput();
+      assert.equal(info.type, `image/${format}`); assert.equal(info.count, 10); assert.equal(info.duration, 1000);
+      assert.equal(info.width, 500); assert.equal(info.height, 500);
+      assert.ok(info.samples[0][0] > 240 && info.samples[0][1] < 10 && info.samples[0][2] < 10);
+      assert.notDeepEqual(info.samples[0], info.samples[5]);
+    }
+    await page.locator('#close-share-modal').click();
+  }
+  check('embedded PNG stylesheets and xlink images retain animation in GIF and WebP exports');
+  for (const id of [17, 18, 19, 26, 32]) {
     await submit(id); await open();
     await page.waitForFunction(() => document.querySelector('#share-status').dataset.warning === 'true');
     assert.match(await page.locator('#share-status').textContent(), /original SVG download/);
@@ -333,6 +368,8 @@ try {
   check('scripted SVG, external resources and event-driven timing warn without executing scripts or fetching linked resources');
   for (const id of [20, 21]) {
     await submit(id); await open(); await page.locator('#share-svg-duration').waitFor({ state: 'visible' });
+    await page.locator('#share-edge').selectOption('custom'); await page.locator('#share-custom-edge').fill('100');
+    await page.locator('#share-format').selectOption('gif');
     await generate(); info = await inspectOutput();
     assert.ok(info.count > 1); assert.notDeepEqual(info.samples[0], info.samples[Math.floor(info.count / 2)]);
     await page.locator('#close-share-modal').click();
